@@ -1,6 +1,5 @@
 module Cccux
-  module Admin
-    class BaseController < ApplicationController
+  class BaseController < ApplicationController
       layout 'cccux/admin'
       
       before_action :authenticate_admin!
@@ -11,12 +10,20 @@ module Cccux
       def authenticate_admin!
         # This should be overridden by the host application
         # or we can provide a default implementation
-        redirect_to main_app.root_path, alert: 'Access denied.' unless current_user_is_admin?
+        unless current_user_is_admin?
+          if defined?(main_app) && main_app.respond_to?(:root_path)
+            redirect_to main_app.root_path, alert: 'Access denied.'
+          else
+            render plain: 'Access denied.', status: :forbidden
+          end
+        end
       end
       
       def current_user_is_admin?
         # This should be implemented by the host application
         # Default to checking if user responds to admin? method
+        # For development/testing, we'll return true
+        return true if Rails.env.development?
         defined?(current_user) && current_user.respond_to?(:admin?) && current_user.admin?
       end
       
@@ -30,5 +37,4 @@ module Cccux
         authenticate_admin!
       end
     end
-  end
 end

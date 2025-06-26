@@ -1,10 +1,8 @@
 Cccux::Engine.routes.draw do
-  root 'admin/dashboard#index'
+  root 'dashboard#index'
   
-  namespace :admin do
-    get '/', to: 'dashboard#index'
     
-    resources :users do
+  resources :users do
       member do
         patch :toggle_active
       end
@@ -46,5 +44,4 @@ Cccux::Engine.routes.draw do
         get :search
       end
     end
-  end
 end

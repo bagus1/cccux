@@ -1,6 +1,5 @@
 module Cccux
-  module Admin
-    class DashboardController < BaseController
+  class DashboardController < BaseController
       def index
         @stats = {
           users_count: Cccux::User.count,
@@ -15,5 +14,4 @@ module Cccux
         @recent_roles = Cccux::Role.order(created_at: :desc).limit(5)
       end
     end
-  end
 end
