@@ -1,0 +1,58 @@
+<div class="container mx-auto px-4 py-8">
+  <div class="max-w-2xl mx-auto">
+    <h1 class="text-3xl font-bold text-gray-900 mb-6">Edit Permission</h1>
+
+    <%= form_with(model: [@ability_permission], url: cccux.ability_permission_path(@ability_permission), local: true, method: :patch, class: "bg-white shadow-md rounded-lg p-6") do |form| %>
+      <% if @ability_permission.errors.any? %>
+        <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
+          <strong><%= pluralize(@ability_permission.errors.count, "error") %> prohibited this permission from being saved:</strong>
+          <ul class="mt-2">
+            <% @ability_permission.errors.full_messages.each do |message| %>
+              <li><%= message %></li>
+            <% end %>
+          </ul>
+        </div>
+      <% end %>
+
+      <div class="mb-4">
+        <%= form.label :subject, class: "block text-sm font-medium text-gray-700 mb-2" %>
+        <%= form.select :subject, 
+                        options_for_select(@available_subjects.map { |s| [s, s] }, @ability_permission.subject),
+                        { include_blank: false },
+                        { class: "mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm" } %>
+        <p class="mt-1 text-sm text-gray-500">The model/resource this permission applies to (e.g., Order, User)</p>
+      </div>
+
+      <div class="mb-4">
+        <%= form.label :action, class: "block text-sm font-medium text-gray-700 mb-2" %>
+        <%= form.select :action, 
+                        options_for_select(@available_actions.map { |a| [a, a] }, @ability_permission.action),
+                        { include_blank: false },
+                        { class: "mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm" } %>
+        <p class="mt-1 text-sm text-gray-500">The action this permission allows (e.g., read, create, update, destroy)</p>
+      </div>
+
+      <div class="mb-6">
+        <%= form.label :description, class: "block text-sm font-medium text-gray-700 mb-2" %>
+        <%= form.text_area :description, 
+                           rows: 3,
+                           class: "mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm",
+                           placeholder: "Optional description of what this permission allows..." %>
+        <p class="mt-1 text-sm text-gray-500">Optional description to help explain what this permission does</p>
+      </div>
+
+      <div class="flex items-center justify-between">
+        <%= form.submit "Update Permission", class: "bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline" %>
+        <%= link_to "Cancel", cccux.ability_permissions_path, class: "text-gray-600 hover:text-gray-800" %>
+      </div>
+    <% end %>
+
+    <div class="mt-6 bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+      <h3 class="text-sm font-medium text-yellow-800 mb-2">⚠️ Warning:</h3>
+      <p class="text-sm text-yellow-700">
+        This permission is currently used by <strong><%= @ability_permission.role_abilities.count %></strong> role(s). 
+        Changing it will affect all roles that have this permission assigned.
+      </p>
+    </div>
+  </div>
+</div> 

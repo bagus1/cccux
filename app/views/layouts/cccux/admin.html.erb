@@ -1,1 +1,49 @@
- 
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>CCCUX Authorization Admin</title>
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <%= csrf_meta_tags %>
+    <%= csp_meta_tag %>
+
+    <%= stylesheet_link_tag "application", "data-turbo-track": "reload" %>
+    <%= javascript_importmap_tags %>
+  </head>
+
+  <body>
+    <nav class="navbar" style="background-color: #f8f9fa; padding: 1rem; border-bottom: 1px solid #dee2e6;">
+      <div class="container-fluid" style="display: flex; justify-content: space-between; align-items: center;">
+        <div>
+          <%= link_to "CCCUX Authorization", cccux.root_path, style: "font-weight: bold; text-decoration: none; font-size: 1.2rem; color: #007bff;" %>
+          <span style="margin-left: 1rem;">
+            <%= link_to "Dashboard", cccux.root_path, style: "margin-right: 1rem; text-decoration: none;" %>
+            <%= link_to "Users", cccux.users_path, style: "margin-right: 1rem; text-decoration: none;" %>
+            <%= link_to "Roles", cccux.roles_path, style: "margin-right: 1rem; text-decoration: none;" %>
+            <%= link_to "Permissions", cccux.ability_permissions_path, style: "text-decoration: none;" %>
+          </span>
+        </div>
+        <div>
+          <span style="margin-right: 1rem; color: #666;">
+            Admin Panel
+          </span>
+        </div>
+      </div>
+    </nav>
+    
+    <div class="container" style="max-width: 1200px; margin: 0 auto; padding: 2rem;">
+      <% if notice %>
+        <div class="alert alert-success" style="background-color: #d1edff; border: 1px solid #0c5460; padding: 1rem; margin-bottom: 1rem; border-radius: 4px;">
+          <%= notice %>
+        </div>
+      <% end %>
+      
+      <% if alert %>
+        <div class="alert alert-danger" style="background-color: #f8d7da; border: 1px solid #721c24; padding: 1rem; margin-bottom: 1rem; border-radius: 4px;">
+          <%= alert %>
+        </div>
+      <% end %>
+      
+      <%= yield %>
+    </div>
+  </body>
+</html> 

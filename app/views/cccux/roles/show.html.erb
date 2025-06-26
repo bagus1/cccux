@@ -1,0 +1,99 @@
+<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
+  <h1>Role: <%= @role.name %></h1>
+  <div>
+    <%= link_to "Edit", cccux.edit_role_path(@role), 
+        style: "background-color: #28a745; color: white; padding: 0.5rem 1rem; text-decoration: none; border-radius: 4px; margin-right: 0.5rem;" %>
+    <%= link_to "Back to Roles", cccux.roles_path, 
+        style: "background-color: #6c757d; color: white; padding: 0.5rem 1rem; text-decoration: none; border-radius: 4px;" %>
+  </div>
+</div>
+
+<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem;">
+  <!-- Role Details -->
+  <div style="background-color: white; border: 1px solid #dee2e6; border-radius: 8px; padding: 1.5rem;">
+    <h3 style="margin-top: 0; color: #495057;">Role Details</h3>
+    
+    <div style="margin-bottom: 1rem;">
+      <strong style="color: #495057;">Name:</strong>
+      <span style="display: block; margin-top: 0.25rem; color: #6c757d;"><%= @role.name %></span>
+    </div>
+    
+    <div style="margin-bottom: 1rem;">
+      <strong style="color: #495057;">Description:</strong>
+      <span style="display: block; margin-top: 0.25rem; color: #6c757d;">
+        <%= @role.description.present? ? @role.description : "No description provided" %>
+      </span>
+    </div>
+    
+    <div style="margin-bottom: 1rem;">
+      <strong style="color: #495057;">Users with this role:</strong>
+      <span style="display: block; margin-top: 0.25rem; color: #6c757d;">
+        <%= pluralize(@users_with_role.count, 'user') %>
+      </span>
+    </div>
+    
+    <div>
+      <strong style="color: #495057;">Created:</strong>
+      <span style="display: block; margin-top: 0.25rem; color: #6c757d;">
+        <%= @role.created_at.strftime('%B %d, %Y at %I:%M %p') %>
+      </span>
+    </div>
+  </div>
+  
+  <!-- Users with this Role -->
+  <div style="background-color: white; border: 1px solid #dee2e6; border-radius: 8px; padding: 1.5rem;">
+    <h3 style="margin-top: 0; color: #495057;">Users (<%= @users_with_role.count %>)</h3>
+    
+    <% if @users_with_role.any? %>
+      <div style="max-height: 300px; overflow-y: auto;">
+        <% @users_with_role.each do |user| %>
+          <div style="padding: 0.75rem; border-bottom: 1px solid #e9ecef; display: flex; justify-content: space-between; align-items: center;">
+            <span style="color: #495057;"><%= user.email %></span>
+            <small style="color: #6c757d;"><%= user.created_at.strftime('%Y-%m-%d') %></small>
+          </div>
+        <% end %>
+      </div>
+    <% else %>
+      <p style="color: #6c757d; font-style: italic;">No users assigned to this role.</p>
+    <% end %>
+  </div>
+</div>
+
+<!-- Permissions Matrix -->
+<div style="background-color: white; border: 1px solid #dee2e6; border-radius: 8px; padding: 1.5rem; margin-top: 2rem;">
+  <h3 style="margin-top: 0; color: #495057;">Permissions Matrix</h3>
+  
+  <% if @permission_matrix.any? %>
+    <div style="overflow-x: auto;">
+      <table style="width: 100%; border-collapse: collapse; min-width: 600px;">
+        <thead>
+          <tr style="background-color: #f8f9fa;">
+            <th style="padding: 0.75rem; text-align: left; border: 1px solid #dee2e6; font-weight: bold;">Resource</th>
+            <th style="padding: 0.75rem; text-align: center; border: 1px solid #dee2e6; font-weight: bold;">Read</th>
+            <th style="padding: 0.75rem; text-align: center; border: 1px solid #dee2e6; font-weight: bold;">Create</th>
+            <th style="padding: 0.75rem; text-align: center; border: 1px solid #dee2e6; font-weight: bold;">Update</th>
+            <th style="padding: 0.75rem; text-align: center; border: 1px solid #dee2e6; font-weight: bold;">Destroy</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% @permission_matrix.each do |subject, actions| %>
+            <tr>
+              <td style="padding: 0.75rem; border: 1px solid #dee2e6; font-weight: bold; color: #495057;"><%= subject %></td>
+              <% ['read', 'create', 'update', 'destroy'].each do |action| %>
+                <td style="padding: 0.75rem; border: 1px solid #dee2e6; text-align: center;">
+                  <% if actions[action] && actions[action][:granted] %>
+                    <span style="color: #28a745; font-weight: bold; font-size: 1.2rem;">✓</span>
+                  <% else %>
+                    <span style="color: #dc3545; font-weight: bold; font-size: 1.2rem;">✗</span>
+                  <% end %>
+                </td>
+              <% end %>
+            </tr>
+          <% end %>
+        </tbody>
+      </table>
+    </div>
+  <% else %>
+    <p style="color: #6c757d; font-style: italic;">No permissions configured for this role.</p>
+  <% end %>
+</div> 

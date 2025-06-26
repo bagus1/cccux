@@ -69,17 +69,8 @@ namespace :cccux do
       puts "   ⚠️  No CSS application file found - CCCUX styling may not load"
     end
     
-    # 4. Copy and run migrations
+    # 4. Run migrations (engine migrations are automatically available)
     puts "🗄️  Setting up CCCUX database..."
-    begin
-      # Copy migrations from engine to host app
-      Rake::Task['cccux:install:migrations'].invoke
-      puts "   ✅ Copied CCCUX migrations"
-    rescue => e
-      puts "   ℹ️  Migration copy: #{e.message}"
-    end
-    
-    # Run migrations
     begin
       Rake::Task['db:migrate'].invoke
       puts "   ✅ Ran database migrations"
