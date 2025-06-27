@@ -1,0 +1,97 @@
+<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
+  <h1>User: <%= @user.email %></h1>
+  <div>
+    <%= link_to "Edit", cccux.edit_user_path(@user), 
+        style: "background-color: #28a745; color: white; padding: 0.5rem 1rem; text-decoration: none; border-radius: 4px; margin-right: 0.5rem;" %>
+    <%= link_to "Back to Users", cccux.users_path, 
+        style: "background-color: #6c757d; color: white; padding: 0.5rem 1rem; text-decoration: none; border-radius: 4px;" %>
+  </div>
+</div>
+
+<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem;">
+  <!-- User Details -->
+  <div style="background-color: white; border: 1px solid #dee2e6; border-radius: 8px; padding: 1.5rem;">
+    <h3 style="margin-top: 0; color: #495057;">User Details</h3>
+    
+    <div style="margin-bottom: 1rem;">
+      <strong style="color: #495057;">Email:</strong>
+      <span style="display: block; margin-top: 0.25rem; color: #6c757d;"><%= @user.email %></span>
+    </div>
+    
+    <div style="margin-bottom: 1rem;">
+      <strong style="color: #495057;">Name:</strong>
+      <span style="display: block; margin-top: 0.25rem; color: #6c757d;">
+        <%= "#{@user.first_name} #{@user.last_name}".strip.presence || "Not provided" %>
+      </span>
+    </div>
+    
+    <div style="margin-bottom: 1rem;">
+      <strong style="color: #495057;">Status:</strong>
+      <span style="display: block; margin-top: 0.25rem;">
+        <span style="background-color: <%= @user.active? ? '#d4edda' : '#f8d7da' %>; color: <%= @user.active? ? '#155724' : '#721c24' %>; padding: 0.25rem 0.5rem; border-radius: 4px; font-size: 0.875rem;">
+          <%= @user.active? ? 'Active' : 'Inactive' %>
+        </span>
+      </span>
+    </div>
+    
+    <div style="margin-bottom: 1rem;">
+      <strong style="color: #495057;">Notes:</strong>
+      <span style="display: block; margin-top: 0.25rem; color: #6c757d;">
+        <%= @user.notes.present? ? @user.notes : "No notes" %>
+      </span>
+    </div>
+    
+    <div>
+      <strong style="color: #495057;">Created:</strong>
+      <span style="display: block; margin-top: 0.25rem; color: #6c757d;">
+        <%= @user.created_at.strftime('%B %d, %Y at %I:%M %p') %>
+      </span>
+    </div>
+  </div>
+  
+  <!-- User Roles -->
+  <div style="background-color: white; border: 1px solid #dee2e6; border-radius: 8px; padding: 1.5rem;">
+    <h3 style="margin-top: 0; color: #495057;">Assigned Roles (<%= @user_roles.count %>)</h3>
+    
+    <% if @user_roles.any? %>
+      <div style="margin-bottom: 1.5rem;">
+        <% @user_roles.each do |role| %>
+          <div style="background-color: #f8f9fa; border: 1px solid #e9ecef; border-radius: 6px; padding: 1rem; margin-bottom: 0.75rem;">
+            <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 0.5rem;">
+              <strong style="color: #495057;"><%= role.name %></strong>
+              <%= link_to "View Role", cccux.role_path(role), 
+                  style: "color: #007bff; text-decoration: none; font-size: 0.9rem;" %>
+            </div>
+            <% if role.description.present? %>
+              <p style="margin: 0; color: #6c757d; font-size: 0.9rem;"><%= role.description %></p>
+            <% end %>
+            <div style="margin-top: 0.5rem;">
+              <small style="color: #6c757d;">
+                <%= pluralize(role.ability_permissions.count, 'permission') %>
+              </small>
+            </div>
+          </div>
+        <% end %>
+      </div>
+    <% else %>
+      <p style="color: #6c757d; font-style: italic;">No roles assigned to this user.</p>
+    <% end %>
+    
+    <% if @available_roles.any? %>
+      <div style="background-color: #e7f3ff; border: 1px solid #bee5eb; border-radius: 4px; padding: 1rem; margin-top: 1rem;">
+        <strong style="color: #0c5460;">Available Roles:</strong>
+        <div style="margin-top: 0.5rem;">
+          <% @available_roles.each do |role| %>
+            <span style="background-color: #d1ecf1; color: #0c5460; padding: 0.2rem 0.4rem; border-radius: 3px; font-size: 0.8rem; margin-right: 0.25rem; margin-bottom: 0.25rem; display: inline-block;">
+              <%= role.name %>
+            </span>
+          <% end %>
+        </div>
+        <div style="margin-top: 0.75rem;">
+          <%= link_to "Edit User Roles", cccux.edit_user_path(@user), 
+              style: "background-color: #17a2b8; color: white; padding: 0.4rem 0.8rem; text-decoration: none; border-radius: 4px; font-size: 0.9rem;" %>
+        </div>
+      </div>
+    <% end %>
+  </div>
+</div> 
