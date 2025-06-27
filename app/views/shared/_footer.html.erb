@@ -1,0 +1,96 @@
+<footer class="footer">
+  <div class="footer-content">
+    <div class="footer-nav">
+      <% if user_signed_in? %>
+        <%= link_to "Dashboard", cccux.root_path, class: "footer-link" %>
+        <%= link_to "Orders", "/orders", class: "footer-link" %>
+        <%= link_to "Roles", cccux.roles_path, class: "footer-link" %>
+      <% else %>
+        <%= link_to "Dashboard", cccux.root_path, class: "footer-link" %>
+      <% end %>
+    </div>
+    
+    <div class="footer-auth">
+      <% if user_signed_in? %>
+        <span class="user-info">
+          Welcome, <%= current_user.first_name || current_user.email %>
+        </span>
+        <%= link_to "Logout", cccux.destroy_user_session_path, method: :delete, class: "footer-link auth-link", data: { turbo_method: :delete } %>
+      <% else %>
+        <%= link_to "Login", cccux.new_user_session_path, class: "footer-link auth-link" %>
+        <%= link_to "Sign Up", cccux.new_user_registration_path, class: "footer-link auth-link" %>
+      <% end %>
+    </div>
+  </div>
+</footer>
+
+<style>
+.footer {
+  background-color: #f8f9fa;
+  border-top: 1px solid #dee2e6;
+  padding: 15px 0;
+  margin-top: 40px;
+  position: relative;
+  bottom: 0;
+  width: 100%;
+}
+
+.footer-content {
+  max-width: 1200px;
+  margin: 0 auto;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0 20px;
+  flex-wrap: wrap;
+}
+
+.footer-nav, .footer-auth {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+
+.footer-link {
+  color: #6c757d;
+  text-decoration: none;
+  padding: 5px 10px;
+  border-radius: 4px;
+  transition: all 0.2s ease;
+}
+
+.footer-link:hover {
+  color: #495057;
+  background-color: #e9ecef;
+  text-decoration: none;
+}
+
+.footer-link.auth-link {
+  color: #007bff;
+  font-weight: 500;
+}
+
+.footer-link.auth-link:hover {
+  color: #0056b3;
+  background-color: #e7f3ff;
+}
+
+.user-info {
+  color: #6c757d;
+  font-size: 14px;
+  margin-right: 10px;
+}
+
+@media (max-width: 768px) {
+  .footer-content {
+    flex-direction: column;
+    gap: 15px;
+    text-align: center;
+  }
+  
+  .footer-nav, .footer-auth {
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+}
+</style> 

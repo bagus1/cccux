@@ -1,11 +1,15 @@
 Cccux::Engine.routes.draw do
+  # Devise authentication routes - use different path to avoid conflicts
+  devise_for :users, class_name: 'Cccux::User', path: 'auth'
+  
   root 'dashboard#index'
   
   # Model Discovery Routes
   get 'model-discovery', to: 'dashboard#model_discovery', as: :model_discovery
   post 'sync-permissions', to: 'dashboard#sync_permissions', as: :sync_permissions
   
-  resources :users do
+  # Admin CRUD routes for user management
+  resources :users, path: 'admin/users' do
       member do
         patch :toggle_active
       end

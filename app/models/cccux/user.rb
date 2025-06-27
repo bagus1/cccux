@@ -1,5 +1,10 @@
 module Cccux
   class User < ApplicationRecord
+    # Include default devise modules. Others available are:
+    # :confirmable, :lockable, :timeoutable, :trackable and :omniauthable
+    devise :database_authenticatable, :registerable,
+           :recoverable, :rememberable, :validatable
+
     has_many :orders, dependent: :destroy
 
     self.table_name = 'cccux_users'
@@ -7,8 +12,6 @@ module Cccux
     # Authorization relationships
     has_many :user_roles, dependent: :destroy, class_name: 'Cccux::UserRole'
     has_many :roles, through: :user_roles, class_name: 'Cccux::Role'
-    
-    validates :email, presence: true, uniqueness: true
     
     def has_role?(role_name)
       roles.exists?(name: role_name)
