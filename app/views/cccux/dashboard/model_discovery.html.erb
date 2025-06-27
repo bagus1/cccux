@@ -1,0 +1,145 @@
+<div style="margin-bottom: 2rem;">
+  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+    <h1 style="margin: 0; color: #495057;">Model Discovery & Permission Sync</h1>
+    <%= link_to "← Back to Dashboard", cccux.root_path, 
+        style: "background-color: #6c757d; color: white; padding: 0.5rem 1rem; text-decoration: none; border-radius: 4px;" %>
+  </div>
+  
+  <div style="background-color: #e7f3ff; border: 1px solid #b8daff; padding: 1rem; border-radius: 4px; margin-bottom: 2rem;">
+    <h4 style="margin-top: 0; color: #004085;">🔍 Smart Model Detection</h4>
+    <p style="margin-bottom: 0; color: #004085; font-size: 0.9rem;">
+      This tool automatically scans your Rails application for models and helps you create permissions for them. 
+      CCCUX engine models are handled separately and won't appear here.
+    </p>
+  </div>
+</div>
+
+<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; margin-bottom: 2rem;">
+  <!-- Detected Models -->
+  <div style="background-color: white; border: 1px solid #dee2e6; border-radius: 8px; padding: 1.5rem;">
+    <h3 style="margin-top: 0; color: #495057; display: flex; align-items: center;">
+      <span style="background-color: #17a2b8; color: white; border-radius: 50%; width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; font-size: 0.8rem; margin-right: 0.5rem;"><%= @detected_models.count %></span>
+      Models Detected
+    </h3>
+    
+    <% if @detected_models.any? %>
+      <div style="max-height: 300px; overflow-y: auto; border: 1px solid #eee; border-radius: 4px; padding: 0.5rem;">
+        <% @detected_models.each do |model| %>
+          <div style="padding: 0.5rem; border-bottom: 1px solid #f8f9fa; display: flex; justify-content: space-between; align-items: center;">
+            <span style="font-family: monospace; font-size: 0.9rem; color: #495057;"><%= model %></span>
+            <% if @existing_models.include?(model) %>
+              <span style="background-color: #d4edda; color: #155724; padding: 0.25rem 0.5rem; border-radius: 12px; font-size: 0.75rem; font-weight: bold;">✓ Has Permissions</span>
+            <% else %>
+              <span style="background-color: #fff3cd; color: #856404; padding: 0.25rem 0.5rem; border-radius: 12px; font-size: 0.75rem; font-weight: bold;">⚠ Missing Permissions</span>
+            <% end %>
+          </div>
+        <% end %>
+      </div>
+    <% else %>
+      <div style="text-align: center; padding: 2rem; color: #6c757d; font-style: italic;">
+        No models detected. Make sure your models inherit from ApplicationRecord.
+      </div>
+    <% end %>
+  </div>
+
+  <!-- Existing Permissions -->
+  <div style="background-color: white; border: 1px solid #dee2e6; border-radius: 8px; padding: 1.5rem;">
+    <h3 style="margin-top: 0; color: #495057; display: flex; align-items: center;">
+      <span style="background-color: #28a745; color: white; border-radius: 50%; width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; font-size: 0.8rem; margin-right: 0.5rem;"><%= @existing_models.count %></span>
+      Models with Permissions
+    </h3>
+    
+    <% if @existing_models.any? %>
+      <div style="max-height: 300px; overflow-y: auto; border: 1px solid #eee; border-radius: 4px; padding: 0.5rem;">
+        <% @existing_models.each do |model| %>
+          <div style="padding: 0.5rem; border-bottom: 1px solid #f8f9fa; display: flex; justify-content: space-between; align-items: center;">
+            <span style="font-family: monospace; font-size: 0.9rem; color: #495057;"><%= model %></span>
+            <span style="background-color: #d4edda; color: #155724; padding: 0.25rem 0.5rem; border-radius: 12px; font-size: 0.75rem; font-weight: bold;">
+              <%= Cccux::AbilityPermission.where(subject: model).count %> permissions
+            </span>
+          </div>
+        <% end %>
+      </div>
+    <% else %>
+      <div style="text-align: center; padding: 2rem; color: #6c757d; font-style: italic;">
+        No models have permissions yet.
+      </div>
+    <% end %>
+  </div>
+</div>
+
+<!-- Add Missing Permissions -->
+<% if @missing_models.any? %>
+  <div style="background-color: white; border: 1px solid #dee2e6; border-radius: 8px; padding: 1.5rem; margin-bottom: 2rem;">
+    <h3 style="margin-top: 0; color: #495057;">Add Permissions for Missing Models</h3>
+    
+    <%= form_with url: cccux.sync_permissions_path, method: :post, local: true do |form| %>
+      <div style="margin-bottom: 1.5rem;">
+        <p style="color: #6c757d; margin-bottom: 1rem;">
+          Select models to create permissions for. Each model will get <strong>read, create, update, destroy</strong> permissions.
+        </p>
+        
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem;">
+          <% @missing_models.each do |model| %>
+            <label style="display: flex; align-items: center; padding: 0.75rem; border: 1px solid #dee2e6; border-radius: 4px; cursor: pointer; transition: background-color 0.2s;" 
+                   onmouseover="this.style.backgroundColor='#f8f9fa'" 
+                   onmouseout="this.style.backgroundColor='white'">
+              <%= check_box_tag "models[]", model, false, style: "margin-right: 0.5rem;" %>
+              <div>
+                <div style="font-weight: bold; color: #495057;"><%= model %></div>
+                <div style="font-size: 0.8rem; color: #6c757d;">4 permissions will be created</div>
+              </div>
+            </label>
+          <% end %>
+        </div>
+      </div>
+      
+      <div style="display: flex; justify-content: space-between; align-items: center;">
+        <div>
+          <button type="button" onclick="selectAll()" style="background-color: #17a2b8; color: white; padding: 0.5rem 1rem; border: none; border-radius: 4px; cursor: pointer; margin-right: 0.5rem;">Select All</button>
+          <button type="button" onclick="selectNone()" style="background-color: #6c757d; color: white; padding: 0.5rem 1rem; border: none; border-radius: 4px; cursor: pointer;">Select None</button>
+        </div>
+        
+        <%= form.submit "Create Permissions", 
+            style: "background-color: #28a745; color: white; padding: 0.75rem 1.5rem; border: none; border-radius: 4px; cursor: pointer; font-weight: bold;" %>
+      </div>
+    <% end %>
+  </div>
+<% else %>
+  <div style="background-color: #d4edda; border: 1px solid #c3e6cb; border-radius: 8px; padding: 1.5rem; text-align: center;">
+    <h4 style="margin-top: 0; color: #155724;">🎉 All Detected Models Have Permissions!</h4>
+    <p style="margin-bottom: 0; color: #155724;">
+      All models in your application already have permissions configured. If you add new models, 
+      return to this page to set up their permissions.
+    </p>
+  </div>
+<% end %>
+
+<!-- Quick Actions -->
+<div style="background-color: #f8f9fa; border-radius: 8px; padding: 1.5rem; margin-top: 2rem;">
+  <h4 style="margin-top: 0; color: #495057;">Quick Actions</h4>
+  <div style="display: flex; gap: 1rem; flex-wrap: wrap;">
+    <%= link_to "View All Permissions", cccux.ability_permissions_path, 
+        style: "background-color: #007bff; color: white; padding: 0.5rem 1rem; text-decoration: none; border-radius: 4px;" %>
+    <%= link_to "Manage Roles", cccux.roles_path, 
+        style: "background-color: #6f42c1; color: white; padding: 0.5rem 1rem; text-decoration: none; border-radius: 4px;" %>
+    <%= link_to "User Management", cccux.users_path, 
+        style: "background-color: #fd7e14; color: white; padding: 0.5rem 1rem; text-decoration: none; border-radius: 4px;" %>
+    <%= link_to "Refresh Detection", cccux.model_discovery_path, 
+        style: "background-color: #20c997; color: white; padding: 0.5rem 1rem; text-decoration: none; border-radius: 4px;" %>
+  </div>
+</div>
+
+<script>
+function selectAll() {
+  document.querySelectorAll('input[name="models[]"]').forEach(checkbox => {
+    checkbox.checked = true;
+  });
+}
+
+function selectNone() {
+  document.querySelectorAll('input[name="models[]"]').forEach(checkbox => {
+    checkbox.checked = false;
+  });
+}
+</script>

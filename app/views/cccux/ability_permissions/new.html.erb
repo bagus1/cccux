@@ -1,15 +1,13 @@
 <div class="container mx-auto px-4 py-8">
-  <div class="max-w-2xl mx-auto">
-    <% if @ability_permission.subject.present? %>
-      <h1 class="text-3xl font-bold text-gray-900 mb-2">New <%= @ability_permission.subject %> Permission</h1>
-      <p class="text-gray-600 mb-6">Create a new permission for the <%= @ability_permission.subject %> model</p>
-    <% else %>
-      <h1 class="text-3xl font-bold text-gray-900 mb-6">New Permission</h1>
-    <% end %>
+  <div class="max-w-4xl mx-auto">
+    <div class="mb-6">
+      <h1 class="text-3xl font-bold text-gray-900 mb-2">Create New Permissions</h1>
+      <p class="text-gray-600">Create one or multiple permissions for a model with intelligent action discovery</p>
+    </div>
 
-    <%= form_with(model: [@ability_permission], url: cccux.ability_permissions_path, local: true, class: "bg-white shadow-md rounded-lg p-6") do |form| %>
+    <%= form_with(model: [@ability_permission], url: cccux.ability_permissions_path, local: true, class: "bg-white shadow-lg rounded-lg p-6") do |form| %>
       <% if @ability_permission.errors.any? %>
-        <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
+        <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-6">
           <strong><%= pluralize(@ability_permission.errors.count, "error") %> prohibited this permission from being saved:</strong>
           <ul class="mt-2">
             <% @ability_permission.errors.full_messages.each do |message| %>
@@ -19,53 +17,292 @@
         </div>
       <% end %>
 
-      <div class="mb-4">
+      <!-- Subject Selection -->
+      <div class="mb-6">
         <%= form.label :subject, class: "block text-sm font-medium text-gray-700 mb-2" %>
         <%= form.select :subject, 
-                        options_for_select([['Select a subject...', '']] + @available_subjects.map { |s| [s, s] }, @ability_permission.subject),
+                        options_for_select([['Select a model...', '']] + @available_subjects.map { |s| [s, s] }, @ability_permission.subject),
                         { include_blank: false },
-                        { class: "mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm #{'bg-gray-100' if @ability_permission.subject.present?}", readonly: @ability_permission.subject.present? } %>
+                        { 
+                          class: "mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm #{'bg-gray-100' if @ability_permission.subject.present?}", 
+                          readonly: @ability_permission.subject.present?,
+                          id: 'subject-select'
+                        } %>
         <p class="mt-1 text-sm text-gray-500">
           <% if @ability_permission.subject.present? %>
-            Creating permission for <%= @ability_permission.subject %> model
+            Creating permissions for <strong><%= @ability_permission.subject %></strong> model
           <% else %>
-            The model/resource this permission applies to (e.g., Order, User)
+            Choose the model/resource for these permissions (e.g., Order, User, Product)
           <% end %>
         </p>
       </div>
 
-      <div class="mb-4">
-        <%= form.label :action, class: "block text-sm font-medium text-gray-700 mb-2" %>
-        <%= form.select :action, 
-                        options_for_select([['Select an action...', '']] + @available_actions.map { |a| [a, a] }, @ability_permission.action),
-                        { include_blank: false },
-                        { class: "mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm" } %>
-        <p class="mt-1 text-sm text-gray-500">The action this permission allows (e.g., read, create, update, destroy)</p>
-      </div>
-
+      <!-- Actions Selection (Multi-select) -->
       <div class="mb-6">
-        <%= form.label :description, class: "block text-sm font-medium text-gray-700 mb-2" %>
-        <%= form.text_area :description, 
-                           rows: 3,
-                           class: "mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm",
-                           placeholder: "Optional description of what this permission allows..." %>
-        <p class="mt-1 text-sm text-gray-500">Optional description to help explain what this permission does</p>
+        <label class="block text-sm font-medium text-gray-700 mb-2">Actions</label>
+        <div id="actions-container" class="border border-gray-300 rounded-md p-4 bg-gray-50 min-h-[100px]">
+          <div id="no-subject-message" class="text-gray-500 text-center py-8">
+            <i class="fas fa-arrow-up text-2xl mb-2"></i>
+            <p>Select a model above to see available actions</p>
+          </div>
+          <div id="actions-checkboxes" class="hidden grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+            <!-- Actions will be populated here via JavaScript -->
+          </div>
+        </div>
+        <div class="mt-2 flex justify-between items-center">
+          <p class="text-sm text-gray-500">Select one or more actions to create permissions for</p>
+          <div class="space-x-2">
+            <button type="button" id="select-all-actions" class="text-sm text-blue-600 hover:text-blue-800">Select All</button>
+            <button type="button" id="select-crud-actions" class="text-sm text-green-600 hover:text-green-800">CRUD Only</button>
+            <button type="button" id="clear-actions" class="text-sm text-gray-600 hover:text-gray-800">Clear</button>
+          </div>
+        </div>
       </div>
 
+      <!-- Description Template -->
+      <div class="mb-6">
+        <%= form.label :description, "Description Template", class: "block text-sm font-medium text-gray-700 mb-2" %>
+        <%= form.text_area :description, 
+                           rows: 2,
+                           class: "mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm",
+                           placeholder: "Leave blank for auto-generated descriptions...",
+                           id: 'description-template' %>
+        <p class="mt-1 text-sm text-gray-500">If provided, will be used as a template. Otherwise, descriptions like "Read orders", "Create orders" will be auto-generated</p>
+      </div>
+
+      <!-- Active Status -->
+      <div class="mb-6">
+        <label class="flex items-center">
+          <%= form.check_box :active, { checked: true, class: "rounded border-gray-300 text-indigo-600 shadow-sm focus:border-indigo-500 focus:ring-indigo-500" } %>
+          <span class="ml-2 text-sm text-gray-700">Active (permissions will be immediately available for assignment)</span>
+        </label>
+      </div>
+
+      <!-- Preview Section -->
+      <div id="preview-section" class="mb-6 hidden">
+        <h3 class="text-lg font-medium text-gray-900 mb-3">Preview: Permissions to be created</h3>
+        <div id="preview-list" class="bg-blue-50 border border-blue-200 rounded-lg p-4 max-h-40 overflow-y-auto">
+          <!-- Preview items will be populated here -->
+        </div>
+      </div>
+
+      <!-- Action Buttons -->
       <div class="flex items-center justify-between">
-        <%= form.submit "Create Permission", class: "bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline" %>
+        <div>
+          <%= form.submit "Create Selected Permissions", 
+                          class: "bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-6 rounded focus:outline-none focus:shadow-outline",
+                          id: 'submit-button',
+                          disabled: true %>
+          <span id="permission-count" class="ml-3 text-sm text-gray-600"></span>
+        </div>
         <%= link_to "Cancel", cccux.ability_permissions_path, class: "text-gray-600 hover:text-gray-800" %>
       </div>
     <% end %>
 
-    <div class="mt-6 bg-blue-50 border border-blue-200 rounded-lg p-4">
-      <h3 class="text-sm font-medium text-blue-800 mb-2">💡 Quick Tips:</h3>
-      <ul class="text-sm text-blue-700 space-y-1">
-        <li>• Use standard CRUD actions: read, create, update, destroy</li>
-        <li>• Custom actions like 'process_order' are also supported</li>
-        <li>• Subject should match your model names (Order, User, etc.)</li>
-        <li>• Once created, this permission will appear in all role management interfaces</li>
-      </ul>
+    <!-- Help Section -->
+    <div class="mt-8 bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-lg p-6">
+      <h3 class="text-lg font-medium text-blue-800 mb-3">🚀 Smart Permission Creation</h3>
+      <div class="grid md:grid-cols-2 gap-4 text-sm text-blue-700">
+        <div>
+          <h4 class="font-semibold mb-2">Auto-Discovery Features:</h4>
+          <ul class="space-y-1">
+            <li>• <strong>Route Analysis:</strong> Discovers actions from your app's routes</li>
+            <li>• <strong>Model Detection:</strong> Finds all models in your application</li>
+            <li>• <strong>Smart Suggestions:</strong> Shows relevant actions per model</li>
+            <li>• <strong>Bulk Creation:</strong> Create multiple permissions at once</li>
+          </ul>
+        </div>
+        <div>
+          <h4 class="font-semibold mb-2">Common Patterns:</h4>
+          <ul class="space-y-1">
+            <li>• <strong>CRUD:</strong> read, create, update, destroy</li>
+            <li>• <strong>Custom Actions:</strong> process_order, approve, cancel</li>
+            <li>• <strong>Admin Actions:</strong> manage (grants all permissions)</li>
+            <li>• <strong>View Only:</strong> read, index, show</li>
+          </ul>
+        </div>
+      </div>
     </div>
   </div>
-</div> 
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  const subjectSelect = document.getElementById('subject-select');
+  const actionsContainer = document.getElementById('actions-container');
+  const noSubjectMessage = document.getElementById('no-subject-message');
+  const actionsCheckboxes = document.getElementById('actions-checkboxes');
+  const previewSection = document.getElementById('preview-section');
+  const previewList = document.getElementById('preview-list');
+  const submitButton = document.getElementById('submit-button');
+  const permissionCount = document.getElementById('permission-count');
+  
+  // Subject actions map from the controller
+  const subjectActionsMap = <%= raw @subject_actions_map.to_json %>;
+  
+  // Handle subject selection change
+  subjectSelect.addEventListener('change', function() {
+    const selectedSubject = this.value;
+    console.log('Subject selected:', selectedSubject);
+    
+    if (selectedSubject) {
+      loadActionsForSubject(selectedSubject);
+    } else {
+      showNoSubjectMessage();
+    }
+  });
+  
+  // Load actions for a specific subject
+  function loadActionsForSubject(subject) {
+    const actions = subjectActionsMap[subject] || [];
+    console.log('Actions for', subject, ':', actions);
+    
+    if (actions.length > 0) {
+      displayActions(actions, subject);
+    } else {
+      // Fallback to AJAX if not in map
+      fetchActionsFromServer(subject);
+    }
+  }
+  
+  // Fetch actions from server via AJAX
+  function fetchActionsFromServer(subject) {
+    fetch(`<%= cccux.actions_for_subject_ability_permissions_path %>?subject=${encodeURIComponent(subject)}`)
+      .then(response => response.json())
+      .then(data => {
+        displayActions(data.actions, subject);
+      })
+      .catch(error => {
+        console.error('Error fetching actions:', error);
+        displayActions(['read', 'create', 'update', 'destroy'], subject);
+      });
+  }
+  
+  // Display actions as checkboxes
+  function displayActions(actions, subject) {
+    noSubjectMessage.classList.add('hidden');
+    actionsCheckboxes.classList.remove('hidden');
+    
+    actionsCheckboxes.innerHTML = '';
+    
+    actions.forEach(action => {
+      const div = document.createElement('div');
+      div.className = 'flex items-center';
+      
+      const checkbox = document.createElement('input');
+      checkbox.type = 'checkbox';
+      checkbox.name = 'ability_permission[actions][]';
+      checkbox.value = action;
+      checkbox.id = `action_${action}`;
+      checkbox.className = 'rounded border-gray-300 text-indigo-600 shadow-sm focus:border-indigo-500 focus:ring-indigo-500';
+      checkbox.addEventListener('change', updatePreview);
+      
+      const label = document.createElement('label');
+      label.htmlFor = `action_${action}`;
+      label.className = 'ml-2 text-sm text-gray-700 cursor-pointer flex-1';
+      label.textContent = action;
+      
+      // Add action type badge
+      const badge = document.createElement('span');
+      badge.className = getActionBadgeClass(action);
+      badge.textContent = getActionType(action);
+      
+      div.appendChild(checkbox);
+      div.appendChild(label);
+      div.appendChild(badge);
+      actionsCheckboxes.appendChild(div);
+    });
+    
+    updatePreview();
+  }
+  
+  // Show no subject selected message
+  function showNoSubjectMessage() {
+    noSubjectMessage.classList.remove('hidden');
+    actionsCheckboxes.classList.add('hidden');
+    previewSection.classList.add('hidden');
+    submitButton.disabled = true;
+    permissionCount.textContent = '';
+  }
+  
+  // Update preview section
+  function updatePreview() {
+    const subject = subjectSelect.value;
+    const selectedActions = Array.from(document.querySelectorAll('input[name="ability_permission[actions][]"]:checked'))
+                                 .map(cb => cb.value);
+    
+    if (selectedActions.length > 0 && subject) {
+      previewSection.classList.remove('hidden');
+      previewList.innerHTML = '';
+      
+      selectedActions.forEach(action => {
+        const div = document.createElement('div');
+        div.className = 'flex items-center justify-between py-1';
+        div.innerHTML = `
+          <span class="font-medium">${action}</span>
+          <span class="text-sm text-gray-600">${subject}</span>
+        `;
+        previewList.appendChild(div);
+      });
+      
+      submitButton.disabled = false;
+      permissionCount.textContent = `(${selectedActions.length} permission${selectedActions.length !== 1 ? 's' : ''})`;
+    } else {
+      previewSection.classList.add('hidden');
+      submitButton.disabled = true;
+      permissionCount.textContent = '';
+    }
+  }
+  
+  // Quick selection buttons
+  document.getElementById('select-all-actions').addEventListener('click', function() {
+    document.querySelectorAll('input[name="ability_permission[actions][]"]').forEach(cb => {
+      cb.checked = true;
+    });
+    updatePreview();
+  });
+  
+  document.getElementById('select-crud-actions').addEventListener('click', function() {
+    const crudActions = ['read', 'create', 'update', 'destroy'];
+    document.querySelectorAll('input[name="ability_permission[actions][]"]').forEach(cb => {
+      cb.checked = crudActions.includes(cb.value);
+    });
+    updatePreview();
+  });
+  
+  document.getElementById('clear-actions').addEventListener('click', function() {
+    document.querySelectorAll('input[name="ability_permission[actions][]"]').forEach(cb => {
+      cb.checked = false;
+    });
+    updatePreview();
+  });
+  
+  // Utility functions
+  function getActionBadgeClass(action) {
+    const crudActions = ['read', 'create', 'update', 'destroy'];
+    if (crudActions.includes(action)) {
+      return 'px-2 py-1 text-xs bg-green-100 text-green-800 rounded-full';
+    } else if (action === 'manage') {
+      return 'px-2 py-1 text-xs bg-purple-100 text-purple-800 rounded-full';
+    } else {
+      return 'px-2 py-1 text-xs bg-blue-100 text-blue-800 rounded-full';
+    }
+  }
+  
+  function getActionType(action) {
+    const crudActions = ['read', 'create', 'update', 'destroy'];
+    if (crudActions.includes(action)) {
+      return 'CRUD';
+    } else if (action === 'manage') {
+      return 'ALL';
+    } else {
+      return 'CUSTOM';
+    }
+  }
+  
+  // Initialize with current subject if set
+  if (subjectSelect.value) {
+    loadActionsForSubject(subjectSelect.value);
+  }
+});
+</script> 

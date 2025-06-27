@@ -1,5 +1,7 @@
 module Cccux
   class User < ApplicationRecord
+    has_many :orders, dependent: :destroy
+
     self.table_name = 'cccux_users'
     
     # Authorization relationships

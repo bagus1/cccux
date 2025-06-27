@@ -1,7 +1,10 @@
 Cccux::Engine.routes.draw do
   root 'dashboard#index'
   
-    
+  # Model Discovery Routes
+  get 'model-discovery', to: 'dashboard#model_discovery', as: :model_discovery
+  post 'sync-permissions', to: 'dashboard#sync_permissions', as: :sync_permissions
+  
   resources :users do
       member do
         patch :toggle_active
@@ -30,6 +33,7 @@ Cccux::Engine.routes.draw do
         get :search
         get :grid
         post :bulk_create
+        get :actions_for_subject
       end
     end
     

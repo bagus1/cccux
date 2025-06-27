@@ -5,10 +5,7 @@ module Cccux
     has_many :role_abilities, dependent: :destroy, class_name: 'Cccux::RoleAbility'
     has_many :roles, through: :role_abilities, class_name: 'Cccux::Role'
     
-    validates :action, presence: true, inclusion: { 
-      in: %w[read create update destroy manage index show new edit],
-      message: "must be a valid action" 
-    }
+    validates :action, presence: true
     validates :subject, presence: true
     validates :action, uniqueness: { scope: :subject }
     
