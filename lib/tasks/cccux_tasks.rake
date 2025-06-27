@@ -78,41 +78,120 @@ namespace :cccux do
       puts "   ⚠️  Migration error: #{e.message}"
     end
     
-    # 5. Create default admin user if none exists
-    puts "👤 Setting up default admin user..."
+    # 5. Run seeds to create roles and permissions
+    puts "🌱 Setting up roles and permissions..."
+    begin
+      # Load seeds from the CCCUX engine
+      cccux_seeds_path = File.join(File.dirname(__FILE__), '..', '..', 'db', 'seeds.rb')
+      load cccux_seeds_path
+      puts "   ✅ Roles and permissions created"
+    rescue => e
+      puts "   ⚠️  Could not run seeds: #{e.message}"
+    end
+
+    # 6. Interactive Role Manager creation
+    puts ""
+    puts "👤 Creating initial Role Manager..."
     begin
       if defined?(Cccux::User) && Cccux::User.count == 0
-        admin_role = Cccux::Role.find_or_create_by(name: 'Administrator') do |role|
-          role.description = 'Full system access'
-          role.active = true
-          role.priority = 1
+        role_manager_role = Cccux::Role.find_by(name: 'Role Manager')
+        
+        if role_manager_role
+          puts ""
+          puts "🔧 Let's create your first Role Manager account:"
+          
+          # Get email address
+          print "   📧 Enter email address: "
+          email = $stdin.gets.chomp
+          
+          while email.blank? || !email.include?('@')
+            print "   ❌ Please enter a valid email address: "
+            email = $stdin.gets.chomp
+          end
+          
+          # Get first name
+          print "   👤 Enter first name: "
+          first_name = $stdin.gets.chomp
+          
+          while first_name.blank?
+            print "   ❌ First name cannot be blank: "
+            first_name = $stdin.gets.chomp
+          end
+          
+          # Get last name
+          print "   👤 Enter last name: "
+          last_name = $stdin.gets.chomp
+          
+          while last_name.blank?
+            print "   ❌ Last name cannot be blank: "
+            last_name = $stdin.gets.chomp
+          end
+          
+          # Get password
+          require 'io/console'
+          print "   🔑 Enter password: "
+          password = $stdin.noecho(&:gets).chomp
+          puts ""  # New line after hidden input
+          
+          while password.length < 6
+            print "   ❌ Password must be at least 6 characters: "
+            password = $stdin.noecho(&:gets).chomp
+            puts ""
+          end
+          
+          # Confirm password
+          print "   🔑 Confirm password: "
+          password_confirmation = $stdin.noecho(&:gets).chomp
+          puts ""
+          
+          while password != password_confirmation
+            puts "   ❌ Passwords don't match. Try again."
+            print "   🔑 Enter password: "
+            password = $stdin.noecho(&:gets).chomp
+            puts ""
+            print "   🔑 Confirm password: "
+            password_confirmation = $stdin.noecho(&:gets).chomp
+            puts ""
+          end
+          
+          # Create the role manager
+          role_manager = Cccux::User.create!(
+            email: email,
+            first_name: first_name,
+            last_name: last_name,
+            password: password,
+            password_confirmation: password_confirmation,
+            active: true,
+            notes: 'Initial Role Manager created during setup'
+          )
+          
+          # Assign Role Manager role
+          Cccux::UserRole.create!(user: role_manager, role: role_manager_role)
+          
+          puts ""
+          puts "   ✅ Role Manager created successfully!"
+          puts "   📧 Email: #{email}"
+          puts "   👤 Name: #{first_name} #{last_name}"
+          puts "   🎉 You can now login at /cccux/auth/sign_in"
+        else
+          puts "   ❌ Role Manager role not found. Please run seeds first."
         end
-        
-        admin_user = Cccux::User.create!(
-          email: 'admin@example.com',
-          first_name: 'System',
-          last_name: 'Administrator',
-          active: true,
-          notes: 'Default admin user created during setup'
-        )
-        
-        Cccux::UserRole.create!(user: admin_user, role: admin_role)
-        puts "   ✅ Created default admin user (admin@example.com)"
       else
-        puts "   ℹ️  Users already exist, skipping default admin creation"
+        puts "   ℹ️  Users already exist, skipping Role Manager creation"
       end
     rescue => e
-      puts "   ⚠️  Could not create default admin: #{e.message}"
+      puts "   ⚠️  Could not create Role Manager: #{e.message}"
     end
     
-    # 6. Setup complete
+    # 7. Setup complete
     puts ""
     puts "🎉 CCCUX Authorization Engine setup complete!"
     puts ""
     puts "✅ Engine mounted at /cccux"
     puts "✅ Assets configured"
     puts "✅ Database migrations run"
-    puts "✅ Default admin user created (if needed)"
+    puts "✅ Roles and permissions configured"
+    puts "✅ Role Manager created (if needed)"
     puts ""
     puts "🌟 Next steps:"
     puts "   1. Start your Rails server: rails server"

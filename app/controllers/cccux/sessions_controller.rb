@@ -8,7 +8,8 @@ module Cccux
     protected
     
     def after_sign_in_path_for(resource)
-      cccux.root_path
+      # Redirect to main app after login
+      stored_location_for(resource) || main_app.try(:root_path) || main_app.try(:orders_path) || cccux.root_path
     end
     
     def after_sign_out_path_for(resource_or_scope)

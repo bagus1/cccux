@@ -14,7 +14,8 @@ module Cccux
         Cccux::UserRole.create(user: resource, role: basic_user_role)
       end
       
-      cccux.root_path
+      # Redirect to main app after registration
+      main_app.try(:root_path) || main_app.try(:orders_path) || cccux.root_path
     end
     
     def sign_up_params

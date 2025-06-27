@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2025_06_27_041331) do
+ActiveRecord::Schema[8.0].define(version: 2025_06_27_145036) do
   create_table "cccux_ability_permissions", force: :cascade do |t|
     t.string "action"
     t.string "subject"
@@ -18,6 +18,7 @@ ActiveRecord::Schema[8.0].define(version: 2025_06_27_041331) do
     t.boolean "active"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.text "scoping_conditions"
   end
 
   create_table "cccux_role_abilities", force: :cascade do |t|
