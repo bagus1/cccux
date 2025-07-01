@@ -2,6 +2,11 @@ module Cccux
   class BaseController < ApplicationController
       layout 'cccux/admin'
       
+      # Automatically load and authorize resources for all CCCUX controllers
+      # This works because CCCUX provides default roles (Guest, Basic User) 
+      # so every user has permissions to check against
+      load_and_authorize_resource
+      
       before_action :authenticate_admin!
       before_action :set_current_user
       

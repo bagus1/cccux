@@ -1,5 +1,7 @@
 module Cccux
   class DashboardController < BaseController
+    # Skip authorization for dashboard actions since they're not resourceful
+    skip_load_and_authorize_resource
     def index
       @user_count = Cccux::User.count
       @role_count = Cccux::Role.count
