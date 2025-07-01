@@ -11,6 +11,31 @@
   </head>
 
   <body>
+    <!-- Turbo Loading Indicator -->
+    <div id="turbo-indicator" style="position: fixed; top: 10px; right: 10px; background: #28a745; color: white; padding: 0.5rem; border-radius: 4px; display: none; z-index: 9999;">
+      🚀 Turbo Loading...
+    </div>
+    
+    <script>
+      // Show loading indicator during Turbo navigation
+      document.addEventListener('turbo:before-visit', () => {
+        const indicator = document.getElementById('turbo-indicator');
+        if (indicator) indicator.style.display = 'block';
+        console.log('🚀 TURBO: Starting navigation...');
+      });
+      
+      document.addEventListener('turbo:load', () => {
+        const indicator = document.getElementById('turbo-indicator');
+        if (indicator) indicator.style.display = 'none';
+        console.log('✅ TURBO: Page loaded!');
+      });
+      
+      // For comparison - this fires on traditional page loads
+      document.addEventListener('DOMContentLoaded', () => {
+        console.log('📄 TRADITIONAL: Full page load');
+      });
+    </script>
+    
     <nav class="navbar" style="background-color: #f8f9fa; padding: 1rem; border-bottom: 1px solid #dee2e6;">
       <div class="container-fluid" style="display: flex; justify-content: space-between; align-items: center;">
         <div>

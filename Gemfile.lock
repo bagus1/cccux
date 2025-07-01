@@ -5,6 +5,7 @@ PATH
       cancancan (~> 3.0)
       devise (~> 4.9)
       rails (>= 7.1.5.1)
+      zeitwerk (~> 2.6)
 
 GEM
   remote: https://rubygems.org/

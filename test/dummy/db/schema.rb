@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2025_06_27_145036) do
+ActiveRecord::Schema[8.0].define(version: 2025_06_27_170611) do
   create_table "cccux_ability_permissions", force: :cascade do |t|
     t.string "action"
     t.string "subject"
@@ -26,7 +26,9 @@ ActiveRecord::Schema[8.0].define(version: 2025_06_27_145036) do
     t.integer "ability_permission_id", null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.boolean "owned", default: false, null: false
     t.index ["ability_permission_id"], name: "index_cccux_role_abilities_on_ability_permission_id"
+    t.index ["role_id", "ability_permission_id", "owned"], name: "index_role_abilities_on_role_permission_owned"
     t.index ["role_id"], name: "index_cccux_role_abilities_on_role_id"
   end
 

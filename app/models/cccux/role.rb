@@ -16,5 +16,34 @@ module Cccux
     def user_count
       users.count
     end
+    
+    def display_name
+      "#{name} (#{users.count} users)"
+    end
+    
+    # Check if role has access to all records for a given subject
+    def has_all_records_access?(subject)
+      role_abilities.joins(:ability_permission)
+                   .where(cccux_ability_permissions: { subject: subject }, owned: false)
+                   .exists?
+    end
+    
+    # Check if role has access to only owned records for a given subject  
+    def has_owned_records_access?(subject)
+      role_abilities.joins(:ability_permission)
+                   .where(cccux_ability_permissions: { subject: subject }, owned: true)
+                   .exists?
+    end
+    
+    # Get ownership scope for a subject ('all', 'owned', or nil if no permissions)
+    def ownership_scope_for(subject)
+      if has_all_records_access?(subject)
+        'all'
+      elsif has_owned_records_access?(subject)
+        'owned'
+      else
+        nil
+      end
+    end
   end
 end 
