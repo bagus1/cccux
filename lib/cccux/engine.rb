@@ -17,5 +17,10 @@ module Cccux
     rake_tasks do
       load 'tasks/cccux_tasks.rake'
     end
+    
+    # Include helpers in host application
+    initializer 'cccux.helpers' do |app|
+      ActionView::Base.include Cccux::AuthorizationHelper
+    end
   end
 end
