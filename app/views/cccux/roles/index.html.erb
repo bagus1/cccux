@@ -1,54 +1,33 @@
 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
   <h1>Role Management</h1>
   <%= link_to "New Role", cccux.new_role_path, 
+      data: { turbo_frame: "new_role_form" },
       style: "background-color: #007bff; color: white; padding: 0.5rem 1rem; text-decoration: none; border-radius: 4px;" %>
 </div>
 
-<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1.5rem;">
-  <% @roles.each do |role| %>
-    <div style="background-color: white; border: 1px solid #dee2e6; border-radius: 8px; padding: 1.5rem;">
-      <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 1rem;">
-        <h3 style="margin: 0; color: #495057;"><%= role.name %></h3>
-        <span style="background-color: #e9ecef; color: #495057; padding: 0.25rem 0.5rem; border-radius: 4px; font-size: 0.875rem;">
-          <%= pluralize(role.users.count, 'user') %>
-        </span>
-      </div>
-      
-      <p style="color: #6c757d; margin-bottom: 1rem; font-size: 0.9rem;">
-        <%= role.description %>
-      </p>
-      
-      <div style="margin-bottom: 1.5rem;">
-        <strong style="color: #495057; font-size: 0.9rem;">Permissions:</strong>
-        <div style="margin-top: 0.5rem;">
-          <% if role.ability_permissions.any? %>
-            <% role.ability_permissions.group_by(&:subject).each do |subject, permissions| %>
-              <div style="margin-bottom: 0.5rem;">
-                <span style="font-weight: bold; color: #495057; font-size: 0.8rem;"><%= subject %>:</span>
-                <% permissions.each do |permission| %>
-                  <span style="background-color: #e7f3ff; color: #0066cc; padding: 0.1rem 0.3rem; border-radius: 3px; font-size: 0.75rem; margin-left: 0.25rem;">
-                    <%= permission.action %>
-                  </span>
-                <% end %>
-              </div>
-            <% end %>
-          <% else %>
-            <span style="color: #6c757d; font-style: italic; font-size: 0.8rem;">No permissions assigned</span>
-          <% end %>
-        </div>
-      </div>
-      
-      <div style="display: flex; gap: 0.5rem;">
-        <%= link_to "View", cccux.role_path(role), 
-            style: "color: #007bff; text-decoration: none; font-size: 0.9rem;" %>
-        <%= link_to "Edit", cccux.edit_role_path(role), 
-            style: "color: #28a745; text-decoration: none; font-size: 0.9rem;" %>
-        <% unless role.users.any? %>
-          <%= link_to "Delete", cccux.role_path(role), data: { "turbo-method": :delete, "turbo-confirm": "Are you sure?" },
-              style: "color: #dc3545; text-decoration: none; font-size: 0.9rem;" %>
-        <% end %>
-      </div>
+<!-- Flash Messages Area -->
+<div id="flash" style="margin-bottom: 1rem;">
+  <% if notice %>
+    <div class="alert alert-success" style="background-color: #d1edff; border: 1px solid #0c5460; padding: 1rem; border-radius: 4px;">
+      <%= notice %>
     </div>
+  <% end %>
+  <% if alert %>
+    <div class="alert alert-danger" style="background-color: #f8d7da; border: 1px solid #721c24; padding: 1rem; border-radius: 4px;">
+      <%= alert %>
+    </div>
+  <% end %>
+</div>
+
+<!-- New Role Form Area -->
+<%= turbo_frame_tag "new_role_form" do %>
+  <!-- Form will load here when "New Role" is clicked -->
+<% end %>
+
+<!-- Roles List -->
+<div id="roles_list" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1.5rem;">
+  <% @roles.each do |role| %>
+    <%= render "role", role: role %>
   <% end %>
 </div>
 
@@ -57,6 +36,7 @@
     <h3>No roles found</h3>
     <p>Create your first role to get started.</p>
     <%= link_to "Create Role", cccux.new_role_path, 
+        data: { turbo_frame: "new_role_form" },
         style: "background-color: #007bff; color: white; padding: 0.5rem 1rem; text-decoration: none; border-radius: 4px;" %>
   </div>
 <% end %> 

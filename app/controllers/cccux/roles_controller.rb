@@ -2,7 +2,8 @@ class Cccux::RolesController < Cccux::BaseController
   before_action :set_role, only: [:show, :edit, :update, :destroy]
   
   def index
-    @roles = Cccux::Role.includes(:ability_permissions, :users).order(:name)
+    @roles = Cccux::Role.includes(:ability_permissions, :users)
+                       .order(Arel.sql("CASE WHEN name = 'Role Manager' THEN 0 ELSE 1 END, name"))
   end
   
   def show
@@ -17,10 +18,23 @@ class Cccux::RolesController < Cccux::BaseController
   def create
     @role = Cccux::Role.new(role_params)
     
-    if @role.save
-      redirect_to cccux.role_path(@role), notice: 'Role was successfully created.'
-    else
-      render :new, status: :unprocessable_entity
+    respond_to do |format|
+      if @role.save
+        format.turbo_stream do
+          render turbo_stream: [
+            turbo_stream.update("new_role_form", ""),
+            turbo_stream.append("roles_list", partial: "role", locals: { role: @role }),
+            turbo_stream.update("flash", partial: "flash", locals: { notice: "Role was successfully created." })
+          ]
+        end
+        format.html { redirect_to cccux.role_path(@role), notice: 'Role was successfully created.' }
+      else
+        format.turbo_stream do
+          render turbo_stream: turbo_stream.update("new_role_form", 
+            partial: "form", locals: { role: @role })
+        end
+        format.html { render :new, status: :unprocessable_entity }
+      end
     end
   end
   
@@ -32,7 +46,7 @@ class Cccux::RolesController < Cccux::BaseController
   def update
     if @role.update(role_params)
       update_permissions
-      redirect_to cccux.role_path(@role), notice: 'Role was successfully updated.'
+      redirect_to cccux.roles_path, notice: 'Role was successfully updated.'
     else
       @permission_matrix = build_permission_matrix
       @available_permissions = Cccux::AbilityPermission.all.group_by(&:subject)
@@ -41,11 +55,23 @@ class Cccux::RolesController < Cccux::BaseController
   end
   
   def destroy
-    if @role.users.any?
-      redirect_to cccux.roles_path, alert: 'Cannot delete role that has users assigned to it.'
-    else
-      @role.destroy
-      redirect_to cccux.roles_path, notice: 'Role was successfully deleted.'
+    respond_to do |format|
+      if @role.users.any?
+        format.turbo_stream do
+          render turbo_stream: turbo_stream.update("flash", 
+            partial: "flash", locals: { alert: "Cannot delete role that has users assigned to it." })
+        end
+        format.html { redirect_to cccux.roles_path, alert: 'Cannot delete role that has users assigned to it.' }
+      else
+        @role.destroy
+        format.turbo_stream do
+          render turbo_stream: [
+            turbo_stream.remove("role_#{@role.id}"),
+            turbo_stream.update("flash", partial: "flash", locals: { notice: "Role was successfully deleted." })
+          ]
+        end
+        format.html { redirect_to cccux.roles_path, notice: 'Role was successfully deleted.' }
+      end
     end
   end
   

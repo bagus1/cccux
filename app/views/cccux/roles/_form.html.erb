@@ -1,18 +1,18 @@
- <%= turbo_frame_tag "new_role_form" do %>
-  <div style="background-color: white; border: 1px solid #dee2e6; border-radius: 8px; padding: 1.5rem; margin-bottom: 1.5rem;">
+ <%= turbo_frame_tag "role_#{role.id}" do %>
+  <div style="background-color: white; border: 1px solid #dee2e6; border-radius: 8px; padding: 1.5rem;">
     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
-      <h3 style="margin: 0; color: #495057;">Create New Role</h3>
+      <h3 style="margin: 0; color: #495057;"><%= role.new_record? ? 'Create New Role' : 'Edit Role' %></h3>
       <%= link_to "Cancel", cccux.roles_path, 
-          data: { turbo_frame: "new_role_form" },
+          data: { turbo_frame: "role_#{role.id}" },
           style: "color: #6c757d; text-decoration: none; font-size: 0.9rem;" %>
     </div>
     
-    <%= form_with model: [@role], url: cccux.roles_path, local: false do |form| %>
-      <% if @role.errors.any? %>
+    <%= form_with model: [role], url: role.new_record? ? cccux.roles_path : cccux.role_path(role), local: false do |form| %>
+      <% if role.errors.any? %>
         <div style="background-color: #f8d7da; border: 1px solid #721c24; padding: 1rem; margin-bottom: 1rem; border-radius: 4px;">
-          <h4 style="margin-top: 0; color: #721c24;"><%= pluralize(@role.errors.count, "error") %> prohibited this role from being saved:</h4>
+          <h4 style="margin-top: 0; color: #721c24;"><%= pluralize(role.errors.count, "error") %> prohibited this role from being saved:</h4>
           <ul style="margin-bottom: 0; color: #721c24;">
-            <% @role.errors.full_messages.each do |message| %>
+            <% role.errors.full_messages.each do |message| %>
               <li><%= message %></li>
             <% end %>
           </ul>
@@ -33,19 +33,21 @@
             placeholder: "Describe what this role can do and its responsibilities..." %>
       </div>
 
-      <div style="background-color: #e7f3ff; border: 1px solid #b8daff; padding: 1rem; border-radius: 4px; margin-bottom: 1.5rem;">
-        <h4 style="margin-top: 0; color: #004085; font-size: 1rem;">📝 Note about Permissions</h4>
-        <p style="margin-bottom: 0; color: #004085; font-size: 0.9rem;">
-          After creating this role, you'll be able to assign specific permissions (read, create, update, destroy) 
-          for each resource (Orders, Users, etc.) on the role's edit page.
-        </p>
-      </div>
+      <% if role.new_record? %>
+        <div style="background-color: #e7f3ff; border: 1px solid #b8daff; padding: 1rem; border-radius: 4px; margin-bottom: 1.5rem;">
+          <h4 style="margin-top: 0; color: #004085; font-size: 1rem;">📝 Note about Permissions</h4>
+          <p style="margin-bottom: 0; color: #004085; font-size: 0.9rem;">
+            After creating this role, you'll be able to assign specific permissions (read, create, update, destroy) 
+            for each resource (Orders, Users, etc.) on the role's edit page.
+          </p>
+        </div>
+      <% end %>
 
       <div style="display: flex; gap: 0.5rem;">
-        <%= form.submit "Create Role", 
+        <%= form.submit role.new_record? ? "Create Role" : "Update Role", 
             style: "background-color: #007bff; color: white; padding: 0.75rem 1.5rem; border: none; border-radius: 4px; cursor: pointer; font-size: 1rem;" %>
         <%= link_to "Cancel", cccux.roles_path, 
-            data: { turbo_frame: "new_role_form" },
+            data: { turbo_frame: "role_#{role.id}" },
             style: "color: #6c757d; text-decoration: none; padding: 0.75rem 1rem; font-size: 1rem;" %>
       </div>
     <% end %>

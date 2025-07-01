@@ -9,17 +9,17 @@ module Cccux
       # Load abilities from database through user's roles
       if user.persisted?
         # Logged in user - use their assigned roles
-        user.roles.includes(:ability_permissions).each do |role|
-          role.ability_permissions.each do |permission|
-            apply_permission_with_scoping(permission, user, role.name)
+        user.roles.includes(:role_abilities => :ability_permission).each do |role|
+          role.role_abilities.each do |role_ability|
+            apply_permission_with_ownership_scope(role_ability, user)
           end
         end
       else
         # Guest user (not logged in) - use "Guest" role permissions
         guest_role = Cccux::Role.find_by(name: 'Guest')
         if guest_role
-          guest_role.ability_permissions.each do |permission|
-            apply_permission_with_scoping(permission, user, 'Guest')
+          guest_role.role_abilities.includes(:ability_permission).each do |role_ability|
+            apply_permission_with_ownership_scope(role_ability, user)
           end
         end
       end
@@ -27,41 +27,30 @@ module Cccux
 
     private
 
-    def apply_permission_with_scoping(permission, user, role_name)
+    def apply_permission_with_ownership_scope(role_ability, user)
+      permission = role_ability.ability_permission
       action = permission.action.to_sym
       subject_class = permission.subject.constantize
       
-      # Check if this permission has custom scoping conditions
-      if permission.scoping_conditions.present?
-        scoping_hash = parse_scoping_conditions(permission.scoping_conditions, user)
-        Rails.logger.debug "Applying scoped permission: #{action} #{subject_class} with #{scoping_hash.inspect}"
-        can action, subject_class, scoping_hash
-      else
-        Rails.logger.debug "Applying unscoped permission: #{action} #{subject_class}"
-        # Default: no scoping - full access to the model
-        can action, subject_class
-      end
-    end
-
-    def parse_scoping_conditions(conditions_string, user)
-      # Parse JSON scoping conditions and substitute user-specific values
-      begin
-        conditions = JSON.parse(conditions_string)
-        
-        # Substitute placeholders with actual user values
-        conditions.transform_values do |value|
-          case value
-          when '{{current_user.id}}'
-            user&.id
-          when '{{current_user.email}}'
-            user&.email
-          else
-            value
-          end
+      if role_ability.owned?
+        # Owned records only - apply scoping based on action type
+        case action
+        when :index
+          # For index, allow the action but scope the query
+          can action, subject_class, user_id: user.id
+        when :create
+          # For create, allow the action (user can create new records)
+          can action, subject_class
+        when :show, :update, :destroy
+          # For individual record actions, scope to owned records
+          can action, subject_class, user_id: user.id
+        else
+          # For other actions, apply general ownership scope
+          can action, subject_class, user_id: user.id
         end
-      rescue JSON::ParserError
-        # If JSON parsing fails, return empty hash (no scoping)
-        {}
+      else
+        # All records - no scoping
+        can action, subject_class
       end
     end
   end
