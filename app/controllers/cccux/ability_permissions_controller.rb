@@ -178,7 +178,7 @@ module Cccux
         end
         
         # Also add CCCUX engine models (so they can be managed through permissions)
-        cccux_models = %w[Cccux::User Cccux::Role Cccux::AbilityPermission Cccux::UserRole Cccux::RoleAbility]
+        cccux_models = %w[Cccux::Role Cccux::AbilityPermission Cccux::UserRole Cccux::RoleAbility]
         models += cccux_models
         
       rescue => e

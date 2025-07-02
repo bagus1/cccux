@@ -23,7 +23,7 @@ module Cccux
     def resource_class
       # For CCCUX controllers, use the namespaced model
       if self.class.name.start_with?('Cccux::')
-        # Extract the model name from controller name (e.g., UsersController -> Cccux::User)
+        # Extract the model name from controller name (e.g., RolesController -> Cccux::Role)
         model_name = self.class.name.gsub('Cccux::', '').gsub('Controller', '').singularize
         "Cccux::#{model_name}".constantize
       else

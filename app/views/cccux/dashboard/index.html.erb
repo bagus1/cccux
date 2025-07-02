@@ -4,7 +4,7 @@
   <div style="background: #e3f2fd; padding: 1rem; border-radius: 5px; text-align: center;">
     <h3 style="margin: 0; color: #1976d2;">Users</h3>
     <p style="font-size: 2rem; margin: 0.5rem 0; color: #1976d2;"><%= @user_count %></p>
-    <p style="margin: 0; color: #666;"><%= Cccux::User.where(active: true).count %> active</p>
+            <p style="margin: 0; color: #666;"><%= User.count %> total</p>
   </div>
   
   <div style="background: #e8f5e8; padding: 1rem; border-radius: 5px; text-align: center;">
@@ -29,7 +29,7 @@
 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; margin-top: 2rem;">
   <div>
     <h3>Recent Users</h3>
-    <% recent_users = Cccux::User.order(created_at: :desc).limit(5) %>
+          <% recent_users = User.order(created_at: :desc).limit(5) %>
     <% if recent_users.any? %>
       <% recent_users.each do |user| %>
         <div style="background: #f8f9fa; padding: 0.5rem; margin: 0.5rem 0; border-radius: 3px;">

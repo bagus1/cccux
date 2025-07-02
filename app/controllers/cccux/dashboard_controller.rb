@@ -1,9 +1,10 @@
 module Cccux
-  class DashboardController < ApplicationController
+  class DashboardController < CccuxController
     # Skip authorization for dashboard actions since they're not resourceful
     skip_load_and_authorize_resource
+    
     def index
-      @user_count = Cccux::User.count
+      @user_count = User.count
       @role_count = Cccux::Role.count
       @permission_count = Cccux::AbilityPermission.count
       @total_assignments = Cccux::UserRole.count + (Cccux::Role.joins(:ability_permissions).count)
@@ -108,8 +109,8 @@ module Cccux
         Rails.logger.error e.backtrace.join("\n")
       end
       
-      # Always include CCCUX engine models for management
-      cccux_models = %w[Cccux::User Cccux::Role Cccux::AbilityPermission Cccux::UserRole Cccux::RoleAbility]
+      # Always include CCCUX engine models for management (but not User since host app owns it)
+      cccux_models = %w[Cccux::Role Cccux::AbilityPermission Cccux::UserRole Cccux::RoleAbility]
       models += cccux_models
       
       # Debug what we found
