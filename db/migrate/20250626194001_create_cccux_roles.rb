@@ -9,5 +9,7 @@ class CreateCccuxRoles < ActiveRecord::Migration[8.0]
       t.timestamps
     end
     add_index :cccux_roles, :name, unique: true
+    add_index :cccux_roles, :active
+    add_index :cccux_roles, :priority
   end
 end
