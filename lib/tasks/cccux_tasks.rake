@@ -80,13 +80,20 @@ namespace :cccux do
       puts "   ⚠️  No CSS application file found - CCCUX styling may not load"
     end
 
-    # 5. Run migrations
+    # 5. Setup Devise (if User model exists)
+    if user_model_exists
+      puts ""
+      puts "🔧 Setting up Devise configuration..."
+      setup_devise_configuration
+    end
+
+    # 6. Run migrations
     puts ""
     puts "📦 To apply CCCUX database migrations, run:"
     puts "    rails db:migrate"
     puts "(Rails will automatically pick up engine migrations.)"
 
-    # 6. Run seeds to create roles and permissions
+    # 7. Run seeds to create roles and permissions
     puts ""
     puts "🌱 Setting up roles and permissions..."
     begin
@@ -100,20 +107,21 @@ namespace :cccux do
       create_default_roles_and_permissions
     end
 
-    # 7. Create default admin user (if no users exist)
+    # 8. Create default admin user (if no users exist)
     puts ""
     puts "👤 Creating default admin user..."
     create_default_admin_user
 
-    # 8. Setup complete
+    # 9. Setup complete
     puts ""
     puts "🎉 CCCUX Authorization Engine setup complete!"
     puts ""
     puts "✅ Engine mounted at /cccux"
     puts "✅ Assets configured"
+    puts "✅ Devise configured (if User model exists)"
     puts "✅ Database migrations ready (run rails db:migrate)"
     puts "✅ Default roles and permissions created"
-          puts "✅ Default Role Manager created (if needed)"
+    puts "✅ Default Role Manager created (if needed)"
     puts ""
     puts "🌟 Next steps:"
     puts "   1. Include CCCUX in your User model:"
@@ -261,6 +269,91 @@ namespace :cccux do
     system('rails db:migrate')
     
     puts "   ✅ Devise and User model setup complete!"
+  end
+
+  def setup_devise_configuration
+    # 1. Add flash messages to application layout
+    puts "   📝 Adding flash messages to application layout..."
+    layout_path = Rails.root.join('app/views/layouts/application.html.erb')
+    
+    if File.exist?(layout_path)
+      layout_content = File.read(layout_path)
+      
+      # Check if flash messages already exist
+      unless layout_content.include?('<p class="notice">')
+        # Find the body tag and add flash messages before yield
+        new_content = layout_content.gsub(
+          /(<body[^>]*>)(.*?)(<%= yield %>)/m,
+          "\\1\\2    <p class=\"notice\"><%= notice %></p>\n    <p class=\"alert\"><%= alert %></p>\n    \\3"
+        )
+        
+        # If the gsub didn't work, try a simpler approach
+        if new_content == layout_content
+          new_content = layout_content.gsub(
+            /(<%= yield %>)/,
+            "    <p class=\"notice\"><%= notice %></p>\n    <p class=\"alert\"><%= alert %></p>\n    \\1"
+          )
+        end
+        
+        File.write(layout_path, new_content)
+        puts "   ✅ Added flash messages to application layout"
+      else
+        puts "   ℹ️  Flash messages already exist in application layout"
+      end
+    else
+      puts "   ⚠️  Application layout not found - flash messages not added"
+    end
+
+    # 2. Setup root route if it doesn't exist
+    puts "   🏠 Setting up root route..."
+    routes_path = Rails.root.join('config/routes.rb')
+    routes_content = File.read(routes_path)
+    
+    # Check if root route already exists
+    if routes_content.include?('root') && !routes_content.include?('# root')
+      puts "   ℹ️  Root route already exists"
+    else
+      # Create a simple home controller and route
+      puts "   📝 Creating home controller and root route..."
+      
+      # Generate home controller
+      system('rails generate controller Home index --skip-routes')
+      
+      # Add root route
+      new_routes_content = routes_content.gsub(
+        /(# Defines the root path route \("\/"\)\n.*?# root "posts#index")/m,
+        "# Defines the root path route (\"/\")\n  root \"home#index\""
+      )
+      
+      File.write(routes_path, new_routes_content)
+      puts "   ✅ Created home controller and root route"
+      
+      # Create a simple home page with sign-in links
+      home_view_path = Rails.root.join('app/views/home/index.html.erb')
+      home_content = <<~HTML
+        <h1>Welcome to <%= Rails.application.class.module_parent_name %></h1>
+
+        <% if user_signed_in? %>
+          <p>Hello, <%= current_user.email %>!</p>
+          <%= link_to "Sign out", destroy_user_session_path, method: :delete %>
+          <br>
+          <%= link_to "CCCUX Admin", "/cccux" %>
+        <% else %>
+          <p>Please sign in to continue.</p>
+          <%= link_to "Sign in", new_user_session_path %>
+          <br>
+          <%= link_to "Sign up", new_user_registration_path %>
+        <% end %>
+      HTML
+      
+      File.write(home_view_path, home_content)
+      puts "   ✅ Created home page with sign-in links"
+    end
+
+    # 3. Ensure Devise is properly installed
+    puts "   🔧 Ensuring Devise is properly configured..."
+    system('rails generate devise:install --force')
+    puts "   ✅ Devise configuration updated"
   end
 
   def create_default_roles_and_permissions

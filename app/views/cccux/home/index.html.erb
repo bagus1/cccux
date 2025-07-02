@@ -1,0 +1,42 @@
+<div class="container mx-auto px-4 py-8">
+  <div class="max-w-2xl mx-auto text-center">
+    <h1 class="text-4xl font-bold text-gray-900 mb-6">
+      Welcome to CCCUX Authorization Engine
+    </h1>
+    
+    <p class="text-lg text-gray-600 mb-8">
+      Your Rails application is now set up with CCCUX authorization.
+    </p>
+    
+    <div class="bg-blue-50 border border-blue-200 rounded-lg p-6 mb-8">
+      <h2 class="text-xl font-semibold text-blue-900 mb-4">Quick Start</h2>
+      <div class="space-y-3 text-left">
+        <div class="flex items-center">
+          <span class="bg-blue-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-sm font-bold mr-3">1</span>
+          <span>Include CCCUX in your User model: <code class="bg-gray-100 px-2 py-1 rounded">include CccuxUserConcern</code></span>
+        </div>
+        <div class="flex items-center">
+          <span class="bg-blue-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-sm font-bold mr-3">2</span>
+          <span>Run database migrations: <code class="bg-gray-100 px-2 py-1 rounded">rails db:migrate</code></span>
+        </div>
+        <div class="flex items-center">
+          <span class="bg-blue-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-sm font-bold mr-3">3</span>
+          <span>Visit the admin interface: <a href="/cccux" class="text-blue-600 hover:underline">/cccux</a></span>
+        </div>
+      </div>
+    </div>
+    
+    <div class="space-y-4">
+      <a href="/cccux" class="inline-block bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition-colors">
+        Go to CCCUX Admin
+      </a>
+      
+      <% if defined?(User) %>
+        <div class="text-sm text-gray-500">
+          <p>User model detected. You can sign in at:</p>
+          <a href="/users/sign_in" class="text-blue-600 hover:underline">/users/sign_in</a>
+        </div>
+      <% end %>
+    </div>
+  </div>
+</div> 

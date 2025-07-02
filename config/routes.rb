@@ -1,6 +1,9 @@
 Cccux::Engine.routes.draw do
   root 'dashboard#index'
   
+  # Fallback home controller for host apps without a root route
+  get 'home', to: 'home#index'
+  
   # Model Discovery Routes
   get 'model-discovery', to: 'dashboard#model_discovery', as: :model_discovery
   post 'sync-permissions', to: 'dashboard#sync_permissions', as: :sync_permissions
