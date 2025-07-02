@@ -1,5 +1,5 @@
 module Cccux
-  class DashboardController < BaseController
+  class DashboardController < ApplicationController
     # Skip authorization for dashboard actions since they're not resourceful
     skip_load_and_authorize_resource
     def index

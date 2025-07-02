@@ -19,7 +19,7 @@ module Cccux
     end
     
     # Include helpers in host application
-    initializer 'cccux.helpers' do |app|
+    config.to_prepare do
       ActionView::Base.include Cccux::AuthorizationHelper
     end
   end
