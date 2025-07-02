@@ -1,114 +1,186 @@
-# CCCUX (CanCanCan UX)
+# CCCUX Authorization Engine
 
-A comprehensive Rails engine that provides admin interface and user experience enhancements for CanCanCan authorization. CCCUX adds role-based access control (RBAC) models, admin controllers for managing permissions, and a clean interface for authorization management.
+A Rails engine that provides flexible role-based authorization using CanCan and a clean admin interface.
 
 ## Features
 
-- **Complete RBAC System**: User, Role, Ability, and Permission models with proper associations
-- **Admin Interface**: Ready-to-use controllers and views for managing authorization
-- **CanCanCan Integration**: Seamlessly extends CanCanCan with UX improvements
-- **Database Migrations**: Automated setup of authorization tables
-- **Flexible Permissions**: Support for action-based and resource-based permissions
-- **Role Management**: Hierarchical role system with inheritance
-- **User Management**: User-role assignment interface
-
-## Models Included
-
-- `Cccux::User` - User management with role associations
-- `Cccux::Role` - Role definitions and hierarchies  
-- `Cccux::Ability` - Permission definitions linked to actions/resources
-- `Cccux::AbilityPermission` - Join table for ability-permission relationships
-- `Cccux::RoleAbility` - Join table for role-ability relationships
-- `Cccux::UserRole` - Join table for user-role assignments
+- **Role-based authorization** with CanCan integration
+- **Flexible permissions** - define permissions for any model/action combination
+- **Ownership scoping** - users can access all records or only their own
+- **Clean admin interface** - manage roles, permissions, and user assignments
+- **Host app integration** - works with your existing User model
 
 ## Installation
 
-Add this line to your application's Gemfile:
+1. Add to your Gemfile:
+```ruby
+gem 'cccux', path: 'path/to/cccux'
+```
+
+2. Run the setup task:
+```bash
+rails cccux:setup
+```
+
+This will:
+- Check if you have a User model
+- Offer to install Devise if needed
+- Run database migrations
+- Create default roles and permissions
+- Create an admin user (if no users exist)
+
+## Integration with Host App
+
+### 1. Include CCCUX in your User model
 
 ```ruby
-gem "cccux"
-```
-
-And then execute:
-```bash
-$ bundle install
-```
-
-Run the installation generator:
-```bash
-$ rails generate cccux:install
-```
-
-Run the migrations:
-```bash
-$ rails db:migrate
-```
-
-## Usage
-
-### 1. Mount the Engine
-
-Add to your `config/routes.rb`:
-```ruby
-Rails.application.routes.draw do
-  mount Cccux::Engine => "/admin"
-  # your other routes
+class User < ApplicationRecord
+  include CccuxUserConcern
+  
+  # Your existing User model code...
+  devise :database_authenticatable, :registerable, :recoverable, :rememberable, :validatable
 end
 ```
 
-### 2. Configure CanCanCan
+### 2. Use authorization in your controllers
 
-In your `app/models/ability.rb`:
 ```ruby
-class Ability
-  include CanCan::Ability
-  include Cccux::AbilityExtensions
-
-  def initialize(user)
-    load_cccux_abilities(user)
-    # your custom abilities
+class OrdersController < ApplicationController
+  load_and_authorize_resource
+  
+  def index
+    # CanCan will automatically scope based on user permissions
+    @orders = @orders.page(params[:page])
+  end
+  
+  def create
+    if @order.save
+      redirect_to @order, notice: 'Order created!'
+    else
+      render :new
+    end
   end
 end
 ```
 
-### 3. Admin Interface
+### 3. Check permissions in views
 
-Visit `/admin` to access the CCCUX admin interface for managing:
-- Users and their roles
-- Roles and their abilities
-- Abilities and permissions
-- Permission assignments
+```erb
+<% if can? :create, Order %>
+  <%= link_to 'New Order', new_order_path %>
+<% end %>
 
-### 4. Integration
+<% if can? :update, @order %>
+  <%= link_to 'Edit', edit_order_path(@order) %>
+<% end %>
+```
 
-Use in your controllers:
+## Usage
+
+### User Methods
+
+Once you include `CccuxUserConcern`, your User model gets these methods:
+
 ```ruby
-class ApplicationController < ActionController::Base
-  include Cccux::Authorization
-  
-  before_action :authenticate_user!
-  check_authorization
+user = User.first
+
+# Role checking
+user.has_role?('Administrator')
+user.has_any_role?('Admin', 'Manager')
+user.admin?
+user.role_manager?
+
+# Permission checking
+user.can?(:create, Order)
+user.cannot?(:destroy, User)
+
+# Role management
+user.assign_role('Basic User')
+user.remove_role('Guest')
+user.role_names
+```
+
+### Creating Permissions
+
+Permissions are automatically created when you run the setup task, but you can also create them manually:
+
+```ruby
+# Create a permission for creating orders
+Cccux::AbilityPermission.create!(
+  action: 'create',
+  subject: 'Order',
+  description: 'Create new orders',
+  active: true
+)
+
+# Assign to a role
+role = Cccux::Role.find_by(name: 'Basic User')
+permission = Cccux::AbilityPermission.find_by(action: 'create', subject: 'Order')
+
+Cccux::RoleAbility.create!(
+  role: role,
+  ability_permission: permission,
+  owned: true  # Users can only create their own orders
+)
+```
+
+### Default Roles
+
+The setup creates these default roles:
+
+- **Guest** (priority 100) - Unauthenticated users with minimal read access
+- **Basic User** (priority 50) - Standard authenticated users
+- **Role Manager** (priority 25) - Can manage roles and permissions
+- **Administrator** (priority 1) - Full system access
+
+## Admin Interface
+
+Visit `/cccux` to access the admin interface where you can:
+
+- Manage roles and their permissions
+- Assign roles to users
+- Create new permissions for your models
+- View system statistics
+
+## Configuration
+
+### Customizing the Engine
+
+You can customize the engine by creating initializers:
+
+```ruby
+# config/initializers/cccux.rb
+Cccux.configure do |config|
+  config.admin_email = 'admin@example.com'
+  config.default_role = 'Basic User'
+end
+```
+
+### Authorization in Controllers
+
+The engine provides a base controller with authorization:
+
+```ruby
+class MyController < Cccux::CccuxController
+  # Authorization is automatically handled
 end
 ```
 
 ## Development
 
-After checking out the repo, run:
+### Running Tests
+
 ```bash
-$ bundle install
-$ cd test/dummy
-$ rails db:migrate
-$ rails server
+bundle exec rspec
 ```
 
-## Contributing
+### Local Development
 
-1. Fork the repository
-2. Create your feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -am 'Add amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
+1. Clone the engine
+2. Add to your test app's Gemfile: `gem 'cccux', path: '../cccux'`
+3. Run `bundle install`
+4. Run `rails cccux:setup`
 
 ## License
 
-The gem is available as open source under the terms of the [MIT License](https://opensource.org/licenses/MIT).
+MIT License - see LICENSE file for details.
