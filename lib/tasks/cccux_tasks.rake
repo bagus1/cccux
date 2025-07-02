@@ -9,6 +9,14 @@ namespace :cccux do
     puts "🚀 Setting up CCCUX Authorization Engine..."
     puts ""
 
+    # Check if already initialized
+    routes_content = File.read('config/routes.rb')
+    if routes_content.include?('##### CCCUX BEGIN #####')
+      puts "⚠️  CCCUX already appears to be initialized in routes.rb"
+      puts "   Delete the CCCUX section and re-run if you want to reinitialize"
+      next
+    end
+
     # 1. Check for existing User model
     user_model_exists = check_for_user_model
     if user_model_exists
@@ -18,30 +26,94 @@ namespace :cccux do
       setup_devise_and_user if offer_devise_setup
     end
 
-    # 2. Run migrations
+    # 2. Add mount line to routes.rb
     puts ""
-    puts "📦 Running database migrations..."
-    Rake::Task['cccux:install:migrations'].invoke
-    Rake::Task['db:migrate'].invoke
+    puts "📝 Adding CCCUX mount to routes.rb..."
+    line = 'Rails.application.routes.draw do'
+    text = File.read('config/routes.rb')
+    new_contents = text.gsub(
+      /(#{Regexp.escape(line)})/mi, 
+      "#{line}\n\n  ##### CCCUX BEGIN #####\n  mount Cccux::Engine, at: '/cccux'\n  ##### CCCUX END #####\n"
+    )
+    File.open('config/routes.rb', "w") { |file| file.puts new_contents }
 
-    # 3. Create default roles and permissions
+    # 3. Add JavaScript assets
+    puts "📦 Adding CCCUX JavaScript assets..."
+    js_path = 'app/assets/javascripts/application.js'
+    js_import_path = 'app/assets/javascript/application.js'
+    
+    # Handle both legacy asset pipeline and modern importmap approaches
+    if File.exist?(js_path)
+      # Legacy asset pipeline
+      unless File.directory?('app/assets/javascripts')
+        FileUtils.mkdir_p('app/assets/javascripts')
+      end
+      
+      js_content = File.read(js_path)
+      unless js_content.include?('cccux/application')
+        File.open(js_path, 'a') { |f| f.puts "//= require cccux/application" }
+        puts "   ✅ Added to #{js_path}"
+      else
+        puts "   ℹ️  JavaScript already configured in #{js_path}"
+      end
+    elsif File.exist?(js_import_path)
+      # Modern approach - just inform user
+      puts "   ℹ️  Modern JavaScript detected at #{js_import_path}"
+      puts "   ℹ️  CCCUX uses engine-scoped assets, no additional JS config needed"
+    else
+      puts "   ⚠️  No JavaScript application file found - CCCUX will still work"
+    end
+    
+    # 4. Add CSS assets
+    puts "🎨 Adding CCCUX CSS assets..."
+    css_path = 'app/assets/stylesheets/application.css'
+    
+    if File.exist?(css_path)
+      css_content = File.read(css_path)
+      unless css_content.include?('cccux/application')
+        File.open(css_path, 'a') { |f| f.puts "/*\n *= require cccux/application\n */" }
+        puts "   ✅ Added to #{css_path}"
+      else
+        puts "   ℹ️  CSS already configured in #{css_path}"
+      end
+    else
+      puts "   ⚠️  No CSS application file found - CCCUX styling may not load"
+    end
+
+    # 5. Run migrations
     puts ""
-    puts "👥 Creating default roles and permissions..."
-    create_default_roles_and_permissions
+    puts "📦 To apply CCCUX database migrations, run:"
+    puts "    rails db:migrate"
+    puts "(Rails will automatically pick up engine migrations.)"
 
-    # 4. Create default admin user (if no users exist)
+    # 6. Run seeds to create roles and permissions
+    puts ""
+    puts "🌱 Setting up roles and permissions..."
+    begin
+      # Load seeds from the CCCUX engine
+      cccux_seeds_path = File.join(File.dirname(__FILE__), '..', '..', 'db', 'seeds.rb')
+      load cccux_seeds_path
+      puts "   ✅ Roles and permissions created"
+    rescue => e
+      puts "   ⚠️  Could not run seeds: #{e.message}"
+      puts "   🔧 Creating default roles and permissions manually..."
+      create_default_roles_and_permissions
+    end
+
+    # 7. Create default admin user (if no users exist)
     puts ""
     puts "👤 Creating default admin user..."
     create_default_admin_user
 
-    # 5. Setup complete
+    # 8. Setup complete
     puts ""
     puts "🎉 CCCUX Authorization Engine setup complete!"
     puts ""
     puts "✅ Engine mounted at /cccux"
-    puts "✅ Database migrations run"
+    puts "✅ Assets configured"
+    puts "✅ Database migrations ready (run rails db:migrate)"
     puts "✅ Default roles and permissions created"
-    puts "✅ Default admin user created (if needed)"
+          puts "✅ Default Role Manager created (if needed)"
     puts ""
     puts "🌟 Next steps:"
     puts "   1. Include CCCUX in your User model:"
@@ -50,9 +122,10 @@ namespace :cccux do
     puts "        # ... your existing code"
     puts "      end"
     puts ""
-    puts "   2. Start your Rails server: rails server"
-    puts "   3. Visit http://localhost:3000/cccux"
-    puts "   4. Begin configuring users, roles, and permissions"
+    puts "   2. Run: rails db:migrate"
+    puts "   3. Start your Rails server: rails server"
+    puts "   4. Visit http://localhost:3000/cccux"
+    puts "   5. Begin configuring users, roles, and permissions"
     puts ""
     puts "📚 Need help? Check the CCCUX documentation or README"
   end
@@ -109,13 +182,13 @@ namespace :cccux do
     
     # Check database
     begin
-      if defined?(Cccux::User)
-        user_count = Cccux::User.count
+      if defined?(User)
+        user_count = User.count
         role_count = Cccux::Role.count
         permission_count = Cccux::AbilityPermission.count
         puts "Database:    ✅ Connected (#{user_count} users, #{role_count} roles, #{permission_count} permissions)"
       else
-        puts "Database:    ❌ CCCUX models not loaded"
+        puts "Database:    ❌ User model not loaded"
       end
     rescue => e
       puts "Database:    ❌ Error: #{e.message}"
@@ -126,7 +199,7 @@ namespace :cccux do
       puts "🌟 CCCUX appears to be properly configured!"
       puts "   Visit /cccux to access the admin interface"
     else
-      puts "⚠️  CCCUX needs configuration. Run: rake cccux:engine_init"
+      puts "⚠️  CCCUX needs configuration. Run: rake cccux:setup"
     end
   end
 
@@ -295,11 +368,11 @@ namespace :cccux do
   def create_default_admin_user
     begin
       if defined?(User) && User.count == 0
-        admin_role = Cccux::Role.find_by(name: 'Administrator')
+        role_manager_role = Cccux::Role.find_by(name: 'Role Manager')
         
-        if admin_role
+        if role_manager_role
           puts ""
-          puts "🔧 Let's create your first Administrator account:"
+          puts "🔧 Let's create your first Role Manager account:"
           
           # Get email address
           print "   📧 Enter email address: "
@@ -361,15 +434,15 @@ namespace :cccux do
           # Set password (Devise handles encryption)
           user.update!(password: password, password_confirmation: password_confirmation)
           
-          # Assign admin role
-          Cccux::UserRole.create!(user: user, role: admin_role)
+          # Assign Role Manager role
+          Cccux::UserRole.create!(user: user, role: role_manager_role)
           
-          puts "   ✅ Created administrator account: #{email}"
+          puts "   ✅ Created Role Manager account: #{email}"
         else
-          puts "   ⚠️  No Administrator role found - skipping user creation"
+          puts "   ⚠️  No Role Manager role found - skipping user creation"
         end
       else
-        puts "   ℹ️  Users already exist, skipping default admin creation"
+        puts "   ℹ️  Users already exist, skipping default Role Manager creation"
       end
     rescue => e
       puts "   ⚠️  Could not create default admin: #{e.message}"
