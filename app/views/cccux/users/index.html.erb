@@ -1,0 +1,95 @@
+<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
+  <h1>User Management</h1>
+  <%= link_to "New User", cccux.new_user_path, 
+      style: "background-color: #007bff; color: white; padding: 0.5rem 1rem; text-decoration: none; border-radius: 4px;" %>
+</div>
+
+<div style="background-color: #e7f3ff; border: 1px solid #b8daff; padding: 1rem; border-radius: 4px; margin-bottom: 2rem;">
+  <h4 style="margin-top: 0; color: #004085;">👥 User Management</h4>
+  <p style="color: #004085; font-size: 0.9rem; margin-bottom: 0;">
+    Manage users and their role assignments. Users automatically get the "Basic User" role when created.
+    You can assign additional roles or modify existing assignments.
+  </p>
+</div>
+
+<% if @users.any? %>
+  <div style="background-color: white; border: 1px solid #dee2e6; border-radius: 8px; overflow: hidden;">
+    <table style="width: 100%; border-collapse: collapse;">
+      <thead style="background-color: #f8f9fa;">
+        <tr>
+          <th style="padding: 1rem; text-align: left; border-bottom: 1px solid #dee2e6; font-weight: bold; color: #495057;">Email</th>
+          <th style="padding: 1rem; text-align: left; border-bottom: 1px solid #dee2e6; font-weight: bold; color: #495057;">Roles</th>
+          <th style="padding: 1rem; text-align: left; border-bottom: 1px solid #dee2e6; font-weight: bold; color: #495057;">Created</th>
+          <th style="padding: 1rem; text-align: center; border-bottom: 1px solid #dee2e6; font-weight: bold; color: #495057;">Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% @users.each do |user| %>
+          <tr style="border-bottom: 1px solid #f8f9fa;">
+            <td style="padding: 1rem; color: #495057;">
+              <strong><%= user.email %></strong>
+              <% if user.created_at > 24.hours.ago %>
+                <span style="background-color: #d4edda; color: #155724; padding: 0.25rem 0.5rem; border-radius: 12px; font-size: 0.75rem; margin-left: 0.5rem;">NEW</span>
+              <% end %>
+            </td>
+            <td style="padding: 1rem;">
+              <% if user.cccux_roles.any? %>
+                <% user.cccux_roles.each do |role| %>
+                  <span style="background-color: #e7f3ff; color: #0066cc; padding: 0.25rem 0.5rem; border-radius: 12px; font-size: 0.75rem; margin-right: 0.25rem; margin-bottom: 0.25rem; display: inline-block;">
+                    <%= role.name %>
+                  </span>
+                <% end %>
+              <% else %>
+                <span style="color: #6c757d; font-style: italic; font-size: 0.9rem;">No roles assigned</span>
+              <% end %>
+            </td>
+            <td style="padding: 1rem; color: #6c757d; font-size: 0.9rem;">
+              <%= user.created_at.strftime('%b %d, %Y') %>
+            </td>
+            <td style="padding: 1rem; text-align: center;">
+              <div style="display: flex; gap: 0.5rem; justify-content: center;">
+                <%= link_to "View", cccux.user_path(user), 
+                    style: "color: #007bff; text-decoration: none; font-size: 0.9rem;" %>
+                <%= link_to "Edit", cccux.edit_user_path(user), 
+                    style: "color: #28a745; text-decoration: none; font-size: 0.9rem;" %>
+                <%= link_to "Delete", cccux.user_path(user), 
+                    data: { "turbo-method": :delete, "turbo-confirm": "Are you sure? This will permanently delete the user." },
+                    style: "color: #dc3545; text-decoration: none; font-size: 0.9rem;" %>
+              </div>
+            </td>
+          </tr>
+        <% end %>
+      </tbody>
+    </table>
+  </div>
+
+  <div style="margin-top: 1rem; color: #6c757d; font-size: 0.9rem; text-align: center;">
+    Showing <%= @users.count %> users
+  </div>
+<% else %>
+  <div style="text-align: center; padding: 3rem; background-color: #f8f9fa; border-radius: 8px;">
+    <h3 style="color: #495057; margin-bottom: 1rem;">No users found</h3>
+    <p style="color: #6c757d; margin-bottom: 2rem;">Get started by creating your first user.</p>
+    <%= link_to "Create First User", cccux.new_user_path, 
+        style: "background-color: #007bff; color: white; padding: 0.75rem 1.5rem; text-decoration: none; border-radius: 4px; font-weight: bold;" %>
+  </div>
+<% end %>
+
+<!-- Quick Stats -->
+<div style="margin-top: 2rem; padding: 1rem; background-color: #f8f9fa; border-radius: 8px;">
+  <h4 style="margin-top: 0; color: #495057;">Quick Stats</h4>
+  <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem;">
+    <div style="text-align: center;">
+      <div style="font-size: 1.5rem; font-weight: bold; color: #007bff;"><%= @users.count %></div>
+      <div style="color: #6c757d; font-size: 0.9rem;">Total Users</div>
+    </div>
+    <div style="text-align: center;">
+      <div style="font-size: 1.5rem; font-weight: bold; color: #28a745;"><%= @users.joins(:cccux_roles).distinct.count %></div>
+      <div style="color: #6c757d; font-size: 0.9rem;">Users with Roles</div>
+    </div>
+    <div style="text-align: center;">
+      <div style="font-size: 1.5rem; font-weight: bold; color: #ffc107;"><%= @roles.count %></div>
+      <div style="color: #6c757d; font-size: 0.9rem;">Available Roles</div>
+    </div>
+  </div>
+</div> 

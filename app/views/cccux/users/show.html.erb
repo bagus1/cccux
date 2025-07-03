@@ -1,0 +1,138 @@
+<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
+  <h1>User: <%= @user.email %></h1>
+  <div>
+    <%= link_to "Edit", cccux.edit_user_path(@user), 
+        style: "background-color: #28a745; color: white; padding: 0.5rem 1rem; text-decoration: none; border-radius: 4px; margin-right: 0.5rem;" %>
+    <%= link_to "← Back to Users", cccux.users_path, 
+        style: "background-color: #6c757d; color: white; padding: 0.5rem 1rem; text-decoration: none; border-radius: 4px;" %>
+  </div>
+</div>
+
+<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem;">
+  <!-- User Details -->
+  <div style="background-color: white; border: 1px solid #dee2e6; border-radius: 8px; padding: 1.5rem;">
+    <h3 style="margin-top: 0; color: #495057;">User Details</h3>
+    
+    <div style="margin-bottom: 1rem;">
+      <strong style="color: #495057;">Email:</strong>
+      <span style="display: block; margin-top: 0.25rem; color: #6c757d;"><%= @user.email %></span>
+    </div>
+    
+    <div style="margin-bottom: 1rem;">
+      <strong style="color: #495057;">Account Created:</strong>
+      <span style="display: block; margin-top: 0.25rem; color: #6c757d;">
+        <%= @user.created_at.strftime('%B %d, %Y at %I:%M %p') %>
+      </span>
+    </div>
+    
+    <div style="margin-bottom: 1rem;">
+      <strong style="color: #495057;">Last Updated:</strong>
+      <span style="display: block; margin-top: 0.25rem; color: #6c757d;">
+        <%= @user.updated_at.strftime('%B %d, %Y at %I:%M %p') %>
+      </span>
+    </div>
+    
+    <div>
+      <strong style="color: #495057;">Total Roles:</strong>
+      <span style="display: block; margin-top: 0.25rem; color: #6c757d;">
+        <%= pluralize(@user_roles.count, 'role') %> assigned
+      </span>
+    </div>
+  </div>
+  
+  <!-- Current Roles -->
+  <div style="background-color: white; border: 1px solid #dee2e6; border-radius: 8px; padding: 1.5rem;">
+    <h3 style="margin-top: 0; color: #495057;">Current Roles (<%= @user_roles.count %>)</h3>
+    
+    <% if @user_roles.any? %>
+      <div style="margin-bottom: 1.5rem;">
+        <% @user_roles.each do |role| %>
+          <div style="display: flex; justify-content: space-between; align-items: center; padding: 0.75rem; border: 1px solid #e9ecef; border-radius: 4px; margin-bottom: 0.5rem;">
+            <div>
+              <strong style="color: #495057;"><%= role.name %></strong>
+              <% if role.description.present? %>
+                <br><small style="color: #6c757d;"><%= role.description %></small>
+              <% end %>
+            </div>
+            <div>
+              <span style="background-color: #e7f3ff; color: #0066cc; padding: 0.25rem 0.5rem; border-radius: 12px; font-size: 0.75rem;">
+                <%= pluralize(role.ability_permissions.count, 'permission') %>
+              </span>
+            </div>
+          </div>
+        <% end %>
+      </div>
+    <% else %>
+      <div style="text-align: center; padding: 2rem; color: #6c757d; font-style: italic; border: 2px dashed #dee2e6; border-radius: 4px;">
+        No roles assigned to this user
+      </div>
+    <% end %>
+    
+    <!-- Quick Role Assignment -->
+    <% if @available_roles.any? %>
+      <div style="border-top: 1px solid #dee2e6; padding-top: 1rem; margin-top: 1rem;">
+        <h5 style="margin-bottom: 0.5rem; color: #495057;">Quick Assign Role:</h5>
+        <div style="display: flex; flex-wrap: wrap; gap: 0.5rem;">
+          <% @available_roles.limit(3).each do |role| %>
+            <%= link_to "+ #{role.name}", cccux.assign_role_user_path(@user, role_id: role.id), 
+                method: :post,
+                style: "background-color: #28a745; color: white; padding: 0.25rem 0.5rem; text-decoration: none; border-radius: 12px; font-size: 0.8rem;" %>
+          <% end %>
+          <% if @available_roles.count > 3 %>
+            <span style="color: #6c757d; font-size: 0.8rem; padding: 0.25rem;">
+              + <%= @available_roles.count - 3 %> more (use Edit)
+            </span>
+          <% end %>
+        </div>
+      </div>
+    <% end %>
+  </div>
+</div>
+
+<!-- Role Permissions Matrix -->
+<% if @user_roles.any? %>
+  <div style="background-color: white; border: 1px solid #dee2e6; border-radius: 8px; padding: 1.5rem; margin-top: 2rem;">
+    <h3 style="margin-top: 0; color: #495057;">Effective Permissions</h3>
+    <p style="color: #6c757d; font-size: 0.9rem; margin-bottom: 1rem;">
+      All permissions this user has through their assigned roles:
+    </p>
+    
+    <% permissions_by_subject = @user_roles.flat_map(&:ability_permissions).group_by(&:subject) %>
+    <% if permissions_by_subject.any? %>
+      <div style="max-height: 400px; overflow-y: auto; border: 1px solid #e9ecef; border-radius: 4px;">
+        <% permissions_by_subject.each do |subject, permissions| %>
+          <div style="padding: 1rem; border-bottom: 1px solid #f8f9fa;">
+            <h5 style="margin: 0 0 0.5rem 0; color: #495057;"><%= subject %></h5>
+            <div style="display: flex; flex-wrap: wrap; gap: 0.25rem;">
+              <% permissions.uniq.each do |permission| %>
+                <span style="background-color: #e7f3ff; color: #0066cc; padding: 0.2rem 0.4rem; border-radius: 3px; font-size: 0.75rem;">
+                  <%= permission.action %>
+                </span>
+              <% end %>
+            </div>
+          </div>
+        <% end %>
+      </div>
+    <% else %>
+      <div style="text-align: center; padding: 2rem; color: #6c757d; font-style: italic;">
+        No permissions available (roles may not have permissions assigned)
+      </div>
+    <% end %>
+  </div>
+<% end %>
+
+<!-- Actions -->
+<div style="margin-top: 2rem; padding: 1rem; background-color: #f8f9fa; border-radius: 8px;">
+  <h4 style="margin-top: 0; color: #495057;">Actions</h4>
+  <div style="display: flex; gap: 1rem; flex-wrap: wrap;">
+    <%= link_to "Edit User & Roles", cccux.edit_user_path(@user), 
+        style: "background-color: #007bff; color: white; padding: 0.5rem 1rem; text-decoration: none; border-radius: 4px;" %>
+    <%= link_to "View All Users", cccux.users_path, 
+        style: "background-color: #6f42c1; color: white; padding: 0.5rem 1rem; text-decoration: none; border-radius: 4px;" %>
+    <%= link_to "Manage Roles", cccux.roles_path, 
+        style: "background-color: #fd7e14; color: white; padding: 0.5rem 1rem; text-decoration: none; border-radius: 4px;" %>
+    <%= link_to "Delete User", cccux.user_path(@user), 
+        data: { "turbo-method": :delete, "turbo-confirm": "Are you sure? This will permanently delete the user and all their role assignments." },
+        style: "background-color: #dc3545; color: white; padding: 0.5rem 1rem; text-decoration: none; border-radius: 4px;" %>
+  </div>
+</div> 

@@ -1,5 +1,8 @@
 module Cccux
-  class DashboardController < ApplicationController
+  class DashboardController < CccuxController
+    # Skip CanCanCan resource loading for dashboard since it doesn't work with a specific model
+    skip_load_and_authorize_resource
+    
     def index
       @user_count = User.count
       @role_count = Cccux::Role.count
@@ -56,6 +59,11 @@ module Cccux
         redirect_to cccux.model_discovery_path, 
                    alert: "No new permissions were added. Models may already have permissions."
       end
+    end
+    
+    # Handle any unmatched routes in CCCUX - redirect to home
+    def not_found
+      redirect_to main_app.root_path, alert: 'The requested page was not found.'
     end
 
     private

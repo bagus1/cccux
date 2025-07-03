@@ -5,12 +5,32 @@ module Cccux
     # CanCanCan authorization
     include CanCan::ControllerAdditions
     
+    # Handle CanCan authorization errors gracefully
+    rescue_from CanCan::AccessDenied do |exception|
+      redirect_to main_app.root_path, alert: 'Access denied. Only Role Managers can access the admin interface.'
+    end
+    
+    # Handle 404 errors in CCCUX admin area - redirect home instead of showing error pages
+    rescue_from ActiveRecord::RecordNotFound do |exception|
+      redirect_to main_app.root_path, alert: 'The requested resource was not found.'
+    end
+    
+    rescue_from ActionController::RoutingError do |exception|
+      redirect_to main_app.root_path, alert: 'The requested page was not found.'
+    end
+    
+    # Handle parameter errors (like invalid IDs)
+    rescue_from ActionController::ParameterMissing do |exception|
+      redirect_to main_app.root_path, alert: 'Invalid request parameters.'
+    end
+    
     # Automatically load and authorize resources for all actions
     # This works because CCCUX provides default roles (Guest, Basic User) 
     # so every user has permissions to check against
     load_and_authorize_resource
     
     before_action :set_current_user
+    before_action :ensure_role_manager
     
     protected
     
@@ -37,6 +57,22 @@ module Cccux
     
     def set_current_user
       @current_user = current_user if defined?(current_user)
+    end
+    
+    private
+    
+    def ensure_role_manager
+      # Check if user is authenticated
+      unless defined?(current_user) && current_user&.persisted?
+        redirect_to main_app.root_path, alert: 'You must be logged in to access the admin interface.'
+        return
+      end
+      
+      # Check if user has Role Manager role
+      unless current_user.has_role?('Role Manager')
+        redirect_to main_app.root_path, alert: 'Access denied. Only Role Managers can access the admin interface.'
+        return
+      end
     end
   end
 end 

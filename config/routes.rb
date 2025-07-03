@@ -10,9 +10,11 @@ Cccux::Engine.routes.draw do
   post 'sync-permissions', to: 'dashboard#sync_permissions', as: :sync_permissions
   
   # Admin CRUD routes for user management
-  resources :users, path: 'admin/users' do
+  resources :users do
       member do
         patch :toggle_active
+        post :assign_role
+        delete :remove_role
       end
       collection do
         get :search
@@ -53,4 +55,7 @@ Cccux::Engine.routes.draw do
         get :search
       end
     end
+    
+    # Catch-all route for any unmatched paths in CCCUX - redirect to home
+    match '*unmatched', to: 'dashboard#not_found', via: :all
 end

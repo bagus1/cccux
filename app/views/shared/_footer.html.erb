@@ -2,12 +2,15 @@
   <div class="footer-content">
     <div class="footer-nav">
       <% if defined?(current_user) && current_user %>
+        <%= link_to "Home", main_app.root_path, class: "footer-link" %>
+
         <%= link_to "Dashboard", cccux.root_path, class: "footer-link" %>
         <%= link_to "Orders", "/orders", class: "footer-link" %>
         <% if respond_to?(:roles_path) %>
           <%= link_to "Roles", cccux.roles_path, class: "footer-link" %>
         <% end %>
       <% else %>
+        <%= link_to "Home", main_app.root_path, class: "footer-link" %>
         <%= link_to "Dashboard", cccux.root_path, class: "footer-link" %>
       <% end %>
     </div>
