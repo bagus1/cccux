@@ -1,6 +1,5 @@
 require "cccux/version"
 require "cccux/engine"
-require "devise"
 require "cancancan"
 
 module Cccux

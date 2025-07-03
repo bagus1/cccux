@@ -24,7 +24,7 @@ Gem::Specification.new do |spec|
 
   spec.add_dependency "rails", ">= 7.1.5.1"
   spec.add_dependency "cancancan", "~> 3.0"
-  spec.add_dependency "devise", "~> 4.9"
+  # spec.add_dependency "devise", "~> 4.9"
   spec.add_dependency "zeitwerk", "~> 2.6"
   
   spec.add_development_dependency "sqlite3"

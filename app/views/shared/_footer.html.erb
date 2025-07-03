@@ -1,24 +1,26 @@
 <footer class="footer">
   <div class="footer-content">
     <div class="footer-nav">
-      <% if user_signed_in? %>
+      <% if defined?(current_user) && current_user %>
         <%= link_to "Dashboard", cccux.root_path, class: "footer-link" %>
         <%= link_to "Orders", "/orders", class: "footer-link" %>
-        <%= link_to "Roles", cccux.roles_path, class: "footer-link" %>
+        <% if respond_to?(:roles_path) %>
+          <%= link_to "Roles", cccux.roles_path, class: "footer-link" %>
+        <% end %>
       <% else %>
         <%= link_to "Dashboard", cccux.root_path, class: "footer-link" %>
       <% end %>
     </div>
     
     <div class="footer-auth">
-      <% if user_signed_in? %>
+      <% if defined?(current_user) && current_user %>
         <span class="user-info">
-          Welcome, <%= current_user.first_name || current_user.email %>
+          Welcome, <%= current_user.respond_to?(:first_name) ? current_user.first_name : current_user.email %>
         </span>
-        <%= link_to "Logout", cccux.destroy_user_session_path, method: :delete, class: "footer-link auth-link", data: { turbo_method: :delete } %>
+        <%= link_to "Logout", main_app.destroy_user_session_path, method: :delete, class: "footer-link auth-link", data: { turbo_method: :delete } %>
       <% else %>
-        <%= link_to "Login", cccux.new_user_session_path, class: "footer-link auth-link" %>
-        <%= link_to "Sign Up", cccux.new_user_registration_path, class: "footer-link auth-link" %>
+        <%= link_to "Login", main_app.new_user_session_path, class: "footer-link auth-link" %>
+        <%= link_to "Sign Up", main_app.new_user_registration_path, class: "footer-link auth-link" %>
       <% end %>
     </div>
   </div>

@@ -9,7 +9,7 @@ module Cccux
 
       # Get all active roles for the user
       user_roles = Cccux::UserRole.active.for_user(user).includes(:role)
-      
+      byebug
       user_roles.each do |user_role|
         role = user_role.role
         
