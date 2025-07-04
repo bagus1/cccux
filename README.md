@@ -12,22 +12,106 @@ A Rails engine that provides flexible role-based authorization using CanCan and 
 
 ## Installation
 
-1. Add to your Gemfile:
+### Prerequisites
+- Rails 7.0+ application
+- Ruby 3.0+ 
+- Database (SQLite, PostgreSQL, MySQL, etc.)
+
+### Step 1: Add CCCUX to Your Gemfile
+
+Add the CCCUX gem to your application's Gemfile:
+
 ```ruby
-gem 'cccux', path: 'path/to/cccux'
+# For local development (recommended for testing)
+gem 'cccux', path: '../cccux'
+
+# Or specify the full path to the CCCUX directory
+gem 'cccux', path: '/path/to/your/cccux/directory'
 ```
 
-2. Run the setup task:
+### Step 2: Install Dependencies
+
+Run bundle install to add CCCUX and its dependencies:
+
+```bash
+bundle install
+```
+
+### Step 3: Run the Setup Task
+
+Execute the CCCUX setup task:
+
 ```bash
 rails cccux:setup
 ```
 
-This will:
-- Check if you have a User model
-- Offer to install Devise if needed
-- Run database migrations
-- Create default roles and permissions
-- Create an admin user (if no users exist)
+The setup task will:
+
+1. **Check for User Model**: Verify you have a User model in your application
+2. **Devise Detection**: If Devise is not detected, it will prompt you to install it:
+   ```
+   Devise not detected. Would you like to install Devise? (y/n)
+   ```
+   - If you choose 'y', it will run `rails generate devise:install`
+   - If you choose 'n', you'll need to set up authentication manually
+
+3. **Database Setup**: Run CCCUX migrations to create the necessary tables
+4. **Default Data**: Create default roles and permissions
+5. **Role Manager User**: If no users exist, it will prompt you to create a Role Manager user:
+   ```
+   No users found. Would you like to create a Role Manager user? (y/n)
+   ```
+   - If you choose 'y', it will prompt for email and password
+   - This user will have full access to the CCCUX admin interface
+
+### Step 4: Start Your Server
+
+Start your Rails server:
+
+```bash
+rails server
+```
+
+### Step 5: Access the Admin Interface
+
+1. **Navigate to the dashboard**: Go to `http://localhost:3000/cccux`
+2. **Login**: Use the Role Manager credentials you created during setup
+3. **Begin configuration**: Use the dashboard to manage roles, permissions, and users
+
+### What Gets Created
+
+The setup process creates:
+
+- **Database Tables**: `cccux_roles`, `cccux_ability_permissions`, `cccux_user_roles`, `cccux_role_abilities`
+- **Default Roles**: Guest, Basic User, Store Manager, Role Manager, Administrator
+- **Default Permissions**: Basic CRUD permissions for common models
+- **Role Manager User**: Admin user with full CCCUX access (if created during setup)
+
+### Troubleshooting
+
+#### "Could not locate Gemfile" Error
+Make sure you're in your Rails application directory when running bundle commands.
+
+#### Devise Installation Issues
+If Devise installation fails, you can install it manually:
+```bash
+rails generate devise:install
+rails generate devise User
+rails db:migrate
+```
+
+#### Migration Errors
+If migrations fail, ensure your database is properly configured:
+```bash
+rails db:create
+rails db:migrate
+```
+
+#### Permission Issues
+If you can't access `/cccux`, ensure:
+- You're logged in with a user that has the Role Manager role
+- The user was created successfully during setup
+- Your User model includes the CCCUX concern (should be automatic)
 
 ## Integration with Host App
 
@@ -49,8 +133,13 @@ class OrdersController < ApplicationController
   load_and_authorize_resource
   
   def index
-    # CanCan will automatically scope based on user permissions
-    @orders = @orders.page(params[:page])
+    # Use the owned scope for clean, consistent authorization
+    if params[:store_id]
+      store = Store.find(params[:store_id])
+      @orders = store.orders.owned
+    else
+      @orders = Order.owned
+    end
   end
   
   def create
@@ -76,6 +165,47 @@ end
 ```
 
 ## Usage
+
+### Authorization Patterns
+
+CCCUX provides a clean, consistent authorization pattern using the `owned` scope:
+
+```ruby
+# Include the Authorizable concern in your models
+class Order < ApplicationRecord
+  include Cccux::Authorizable
+  belongs_to :user
+end
+
+class Store < ApplicationRecord
+  include Cccux::Authorizable
+  has_many :store_managers
+  has_many :managers, through: :store_managers, source: :user
+end
+
+# Use the owned scope in your controllers
+class OrdersController < ApplicationController
+  load_and_authorize_resource
+  
+  def index
+    @orders = Order.owned.order(:created_at)  # Clean and consistent
+  end
+end
+
+class StoresController < ApplicationController
+  load_and_authorize_resource
+  
+  def index
+    @stores = Store.owned.order(:name)  # Clean and consistent
+  end
+end
+```
+
+**Benefits of the `owned` scope:**
+- **Shorter syntax**: `Order.owned` vs `Order.accessible_by(current_ability)`
+- **Consistent across all models**: Same pattern for User, Store, Order, etc.
+- **Automatic ownership detection**: CCCUX automatically applies the correct ownership logic
+- **Performance optimized**: Includes proper eager loading and joins
 
 ### User Methods
 
@@ -158,13 +288,28 @@ end
 
 ### Authorization in Controllers
 
-The engine provides a base controller with authorization:
+The engine provides several base controller classes for different use cases:
 
 ```ruby
+# For CCCUX admin functionality
 class MyController < Cccux::CccuxController
-  # Authorization is automatically handled
+  # Uses CCCUX admin layout and authorization
+end
+
+# For host app controllers with CCCUX authorization
+class OrdersController < Cccux::AuthorizationController
+  load_and_authorize_resource
+  # Uses your app's layout with CCCUX authorization
 end
 ```
+
+For detailed controller patterns and inheritance requirements, see [CONTROLLER_GUIDE.md](CONTROLLER_GUIDE.md).
+
+For a quick reference of common patterns, see [QUICK_REFERENCE.md](QUICK_REFERENCE.md).
+
+For detailed user documentation on using the admin interface, see [USER_GUIDE.md](USER_GUIDE.md).
+
+For comprehensive view helper documentation and examples, see [VIEW_GUIDE.md](VIEW_GUIDE.md).
 
 ## Development
 

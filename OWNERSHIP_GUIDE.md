@@ -16,9 +16,32 @@ CCCUX supports **record-level permissions** where users can be granted access to
 
 ## Model Requirements
 
-For the "Owned Records Only" feature to work, your models need a **user ownership field**. The most common approaches are:
+For the "Owned Records Only" feature to work, your models need to implement ownership methods. CCCUX provides the `Cccux::Authorizable` concern to make this easier:
 
-### Option 1: user_id field (Recommended)
+### Option 1: Include the Authorizable Concern (Recommended)
+```ruby
+class Order < ApplicationRecord
+  include Cccux::Authorizable
+  belongs_to :user
+  
+  # Migration
+  # add_column :orders, :user_id, :integer, null: false
+  # add_foreign_key :orders, :users
+end
+```
+
+This provides a convenient `owned` scope:
+```ruby
+# In your controller
+def index
+  @orders = Order.owned  # Automatically scoped based on current user's permissions
+end
+```
+
+### Option 2: Manual Implementation
+If you prefer not to use the concern, your models need a **user ownership field**. The most common approaches are:
+
+#### user_id field (Most Common)
 ```ruby
 class Order < ApplicationRecord
   belongs_to :user
@@ -29,7 +52,7 @@ class Order < ApplicationRecord
 end
 ```
 
-### Option 2: creator_id field  
+#### creator_id field  
 ```ruby
 class Article < ApplicationRecord
   belongs_to :creator, class_name: 'User', foreign_key: 'creator_id'
@@ -40,7 +63,7 @@ class Article < ApplicationRecord
 end
 ```
 
-### Option 3: Custom ownership logic
+#### Custom ownership logic
 ```ruby
 class Project < ApplicationRecord
   has_many :project_members
@@ -60,11 +83,26 @@ For models with a `user_id` field, no controller changes are needed. CCCUX will 
 
 ```ruby
 class OrdersController < ApplicationController
+  include Cccux::AuthorizationController
   load_and_authorize_resource  # CanCanCan handles scoping automatically
   
   def index
     # @orders is automatically scoped to current_user.orders if "Owned Records Only"
     # @orders contains all orders if "All Records"
+  end
+end
+```
+
+### Using the Authorizable Concern
+
+If you're using the `Cccux::Authorizable` concern in your models, you can use the convenient `owned` scope:
+
+```ruby
+class OrdersController < ApplicationController
+  include Cccux::AuthorizationController
+  
+  def index
+    @orders = Order.owned  # Shorter than accessible_by(current_ability)
   end
 end
 ```

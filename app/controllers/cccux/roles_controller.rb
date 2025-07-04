@@ -7,7 +7,7 @@ module Cccux
     
     def index
       @roles = Cccux::Role.includes(:ability_permissions, :users)
-                         .order(Arel.sql("CASE WHEN name = 'Role Manager' THEN 0 ELSE 1 END, name"))
+                         .order(:priority, :name)
     end
     
     def show
@@ -128,7 +128,7 @@ module Cccux
     
     def update_permissions
       permission_ids = params[:role][:ability_permission_ids] || []
-      ownership_scopes = params[:role][:ownership_scope] || {}
+      permission_owned = params[:role][:permission_owned] || {}
       
       # Clear existing role abilities
       @role.role_abilities.destroy_all
@@ -136,21 +136,20 @@ module Cccux
       # Get selected permissions
       selected_permissions = Cccux::AbilityPermission.where(id: permission_ids)
       
-      # Group permissions by subject to apply ownership scope
-      permissions_by_subject = selected_permissions.group_by(&:subject)
-      
-      permissions_by_subject.each do |subject, permissions|
-        # Determine ownership scope for this subject (default to 'all' for CCCUX models)
-        scope = ownership_scopes[subject] || (subject.start_with?('Cccux::') ? 'all' : 'all')
-        is_owned = (scope == 'owned')
-        
-        # Create role abilities with appropriate ownership scope
-        permissions.each do |permission|
-          @role.role_abilities.create!(
-            ability_permission: permission,
-            owned: is_owned
-          )
+      # Create role abilities with individual ownership settings
+      selected_permissions.each do |permission|
+        # Determine ownership setting for this specific permission
+        # Default to false (all records) for CCCUX models, or based on form input
+        is_owned = if permission.subject.start_with?('Cccux::')
+          false # CCCUX models always have access to all records
+        else
+          permission_owned[permission.id.to_s] == 'true'
         end
+        
+        @role.role_abilities.create!(
+          ability_permission: permission,
+          owned: is_owned
+        )
       end
     end
     

@@ -71,43 +71,57 @@
           <div style="margin-bottom: 1.5rem; padding: 1rem; border: 1px solid #e9ecef; border-radius: 4px;">
             <h5 style="margin: 0 0 0.75rem 0; color: #495057; font-weight: bold;"><%= subject %></h5>
             
-            <!-- Ownership Scope Selection (for non-CCCUX models) -->
-            <% unless subject.start_with?('Cccux::') %>
-              <div style="background-color: #f8f9fa; padding: 0.75rem; border-radius: 4px; margin-bottom: 1rem;">
-                <div style="font-weight: bold; color: #495057; margin-bottom: 0.5rem; font-size: 0.9rem;">Record Access Scope:</div>
-                <div style="display: flex; gap: 1rem;">
-                  <%= radio_button_tag "role[ownership_scope][#{subject}]", "all", 
-                      @role.has_all_records_access?(subject), 
-                      id: "scope_all_#{subject}",
-                      style: "margin-right: 0.25rem;" %>
-                  <%= label_tag "scope_all_#{subject}", "All Records", 
-                      style: "margin-right: 1rem; font-size: 0.9rem; cursor: pointer;" %>
-                  
-                  <%= radio_button_tag "role[ownership_scope][#{subject}]", "owned", 
-                      @role.has_owned_records_access?(subject), 
-                      id: "scope_owned_#{subject}",
-                      style: "margin-right: 0.25rem;" %>
-                  <%= label_tag "scope_owned_#{subject}", "Owned Records Only", 
-                      style: "font-size: 0.9rem; cursor: pointer;" %>
-                </div>
-                <div style="font-size: 0.8rem; color: #6c757d; margin-top: 0.25rem;">
-                  Choose whether this role can access all records or only records they own/created
-                </div>
-              </div>
-            <% end %>
-            
-            <!-- Action Permissions -->
-            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 0.5rem;">
+            <!-- Action Permissions with Individual Ownership Controls -->
+            <div style="display: grid; grid-template-columns: 1fr; gap: 0.5rem;">
               <% permissions.each do |permission| %>
-                <label style="display: flex; align-items: center; cursor: pointer; padding: 0.25rem;">
-                  <%= check_box_tag "role[ability_permission_ids][]", 
-                      permission.id, 
-                      @role.ability_permissions.include?(permission),
-                      style: "margin-right: 0.5rem;" %>
-                  <span style="font-size: 0.9rem; color: #495057;">
-                    <%= permission.action.capitalize %>
-                  </span>
-                </label>
+                <% 
+                  # Check if this permission is currently assigned to the role
+                  is_assigned = @role.ability_permissions.include?(permission)
+                  
+                  # Get the current ownership setting for this specific permission
+                  role_ability = @role.role_abilities.find_by(ability_permission: permission)
+                  is_owned = role_ability&.owned || false
+                %>
+                
+                <div style="display: flex; align-items: center; padding: 0.5rem; border: 1px solid #e9ecef; border-radius: 4px; background-color: #f8f9fa;">
+                  <!-- Permission Checkbox -->
+                  <div style="margin-right: 1rem;">
+                    <%= check_box_tag "role[ability_permission_ids][]", 
+                        permission.id, 
+                        is_assigned,
+                        style: "margin-right: 0.5rem;",
+                        class: "permission-checkbox",
+                        data: { permission_id: permission.id } %>
+                    <span style="font-size: 0.9rem; color: #495057; font-weight: bold;">
+                      <%= permission.action.capitalize %>
+                    </span>
+                  </div>
+                  
+                  <!-- Ownership Scope (only show for models that support ownership and when permission is checked) -->
+                  <% if permission.supports_ownership? && permission.model_supports_ownership? %>
+                    <div style="margin-left: auto; display: flex; align-items: center; gap: 0.5rem;">
+                      <span style="font-size: 0.8rem; color: #6c757d;">Scope:</span>
+                      
+                      <%= radio_button_tag "role[permission_owned][#{permission.id}]", "false", 
+                          !is_owned, 
+                          id: "owned_false_#{permission.id}",
+                          style: "margin-right: 0.25rem;",
+                          disabled: !is_assigned %>
+                      <%= label_tag "owned_false_#{permission.id}", "All", 
+                          style: "font-size: 0.8rem; cursor: pointer; margin-right: 0.5rem;",
+                          class: is_assigned ? "" : "text-muted" %>
+                      
+                      <%= radio_button_tag "role[permission_owned][#{permission.id}]", "true", 
+                          is_owned, 
+                          id: "owned_true_#{permission.id}",
+                          style: "margin-right: 0.25rem;",
+                          disabled: !is_assigned %>
+                      <%= label_tag "owned_true_#{permission.id}", "Owned", 
+                          style: "font-size: 0.8rem; cursor: pointer;",
+                          class: is_assigned ? "" : "text-muted" %>
+                    </div>
+                  <% end %>
+                </div>
               <% end %>
             </div>
           </div>
@@ -120,6 +134,30 @@
       <% end %>
     </div>
   </div>
+
+  <!-- JavaScript to handle permission checkbox interactions -->
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      // Handle permission checkbox changes
+      document.querySelectorAll('.permission-checkbox').forEach(function(checkbox) {
+        checkbox.addEventListener('change', function() {
+          const permissionId = this.dataset.permissionId;
+          const ownedControls = document.querySelectorAll(`input[name="role[permission_owned][${permissionId}]"]`);
+          const ownedLabels = document.querySelectorAll(`label[for^="owned_${permissionId}"]`);
+          
+          if (this.checked) {
+            // Enable ownership controls
+            ownedControls.forEach(control => control.disabled = false);
+            ownedLabels.forEach(label => label.classList.remove('text-muted'));
+          } else {
+            // Disable ownership controls
+            ownedControls.forEach(control => control.disabled = true);
+            ownedLabels.forEach(label => label.classList.add('text-muted'));
+          }
+        });
+      });
+    });
+  </script>
 
   <!-- Form Actions -->
   <div style="background-color: white; border: 1px solid #dee2e6; border-radius: 8px; padding: 1.5rem;">

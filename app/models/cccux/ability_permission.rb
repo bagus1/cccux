@@ -19,5 +19,43 @@ module Cccux
     def role_count
       roles.count
     end
+    
+    # Determine if this permission supports ownership controls
+    def supports_ownership?
+      # CCCUX system models don't support ownership
+      return false if subject.start_with?('Cccux::')
+      
+      # You could add more sophisticated logic here:
+      # - Check if the model has ownership methods (owned_by?, scoped_for_user)
+      # - Check against a configuration list
+      # - Check if the model is in a specific namespace
+      
+      true
+    end
+    
+    # Get the model class for this permission
+    def model_class
+      return nil unless subject.present?
+      
+      if subject.include?('::')
+        subject.constantize
+      else
+        Object.const_get(subject)
+      end
+    rescue NameError
+      nil
+    end
+    
+    # Check if the model has ownership capabilities
+    def model_supports_ownership?
+      klass = model_class
+      return false unless klass
+      
+      # Check if model has ownership methods
+      klass.respond_to?(:owned_by?) || 
+      klass.respond_to?(:scoped_for_user) ||
+      klass.column_names.include?('user_id') ||
+      klass.column_names.include?('creator_id')
+    end
   end
 end
