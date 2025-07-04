@@ -1,5 +1,7 @@
 module Cccux
   class AbilityPermissionsController < CccuxController
+    # Ensure only Role Managers can access permission management
+    before_action :ensure_role_manager
 
     before_action :set_ability_permission, only: [:show, :edit, :update, :destroy]
 

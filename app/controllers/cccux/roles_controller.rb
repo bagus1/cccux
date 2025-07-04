@@ -1,5 +1,7 @@
 module Cccux
   class RolesController < CccuxController
+    # Ensure only Role Managers can access role management
+    before_action :ensure_role_manager
 
     before_action :set_role, only: [:show, :edit, :update, :destroy]
     

@@ -207,9 +207,34 @@ namespace :cccux do
     css_path = Rails.root.join('app/assets/stylesheets/application.css')
     if File.exist?(css_path)
       css_content = File.read(css_path)
-      unless css_content.include?('cccux/application')
-        File.open(css_path, 'a') { |f| f.puts "/*\n *= require cccux/application\n */" }
-        puts "   ✅ Added CCCUX CSS to application.css"
+      
+      # Check if we're using Propshaft or Sprockets
+      if defined?(Propshaft)
+        # For Propshaft, copy the actual CSS content since it doesn't process @import
+        unless css_content.include?('CCCUX Engine Styles')
+          # Read the CCCUX CSS content
+          cccux_css_path = File.join(File.dirname(__FILE__), '..', '..', 'app', 'assets', 'stylesheets', 'cccux', 'application.css')
+          if File.exist?(cccux_css_path)
+            cccux_css_content = File.read(cccux_css_path)
+            # Extract just the CSS rules, not the manifest comments
+            css_rules = cccux_css_content.split('*/').last.strip if cccux_css_content.include?('*/')
+            css_rules ||= cccux_css_content
+            
+            File.open(css_path, 'a') do |f|
+              f.puts "\n\n/* CCCUX Engine Styles - Added by CCCUX setup */"
+              f.puts css_rules
+            end
+            puts "   ✅ Added CCCUX CSS content to application.css (Propshaft)"
+          else
+            puts "   ⚠️  Could not find CCCUX CSS file at #{cccux_css_path}"
+          end
+        end
+      else
+        # Sprockets uses *= require syntax
+        unless css_content.include?('cccux/application')
+          File.open(css_path, 'a') { |f| f.puts "/*\n *= require cccux/application\n */" }
+          puts "   ✅ Added CCCUX CSS to application.css (Sprockets)"
+        end
       end
     end
     

@@ -13,3 +13,90 @@
  *= require_tree .
  *= require_self
  */
+
+/* Action Button Styles */
+.cccux-btn {
+    padding: 0.375rem 0.75rem;
+    text-decoration: none;
+    border-radius: 4px;
+    font-size: 0.875rem;
+    border: none;
+    cursor: pointer;
+    display: inline-block;
+    text-align: center;
+}
+
+.cccux-btn-view {
+    background: #17a2b8;
+    color: white;
+}
+
+.cccux-btn-view:hover {
+    background: #138496;
+    color: white;
+    text-decoration: none;
+}
+
+.cccux-btn-edit {
+    background: #ffc107;
+    color: #212529;
+}
+
+.cccux-btn-edit:hover {
+    background: #e0a800;
+    color: #212529;
+    text-decoration: none;
+}
+
+.cccux-btn-delete {
+    background: #dc3545;
+    color: white;
+}
+
+.cccux-btn-delete:hover {
+    background: #c82333;
+    color: white;
+}
+
+.cccux-btn-create {
+    background: #007bff;
+    color: white;
+    padding: 0.75rem 1.5rem;
+    font-weight: bold;
+    border-radius: 6px;
+}
+
+.cccux-btn-create:hover {
+    background: #0056b3;
+    color: white;
+    text-decoration: none;
+}
+
+/* Button Group Utilities */
+.cccux-btn-group {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.cccux-btn-group-center {
+    display: flex;
+    gap: 0.5rem;
+    justify-content: center;
+}
+
+.cccux-btn-group-end {
+    display: flex;
+    gap: 0.5rem;
+    justify-content: flex-end;
+}
+
+/* Size Variants */
+.cccux-btn-sm {
+    padding: 0.25rem 0.5rem;
+    font-size: 0.75rem;
+}
+
+.cccux-btn-lg {
+    padding: 0.75rem 1.5rem;
+    font-size: 1rem;
+}

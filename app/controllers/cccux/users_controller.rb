@@ -1,4 +1,7 @@
 class Cccux::UsersController < Cccux::CccuxController
+  # Ensure only Role Managers can access user management
+  before_action :ensure_role_manager
+  
   before_action :set_user, only: [:show, :edit, :update, :destroy]
   
   def index

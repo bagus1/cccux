@@ -3,6 +3,9 @@ module Cccux
     # Skip CanCanCan resource loading for dashboard since it doesn't work with a specific model
     skip_load_and_authorize_resource
     
+    # Ensure only Role Managers can access the dashboard
+    before_action :ensure_role_manager
+    
     def index
       @user_count = User.count
       @role_count = Cccux::Role.count

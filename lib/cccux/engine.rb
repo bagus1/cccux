@@ -24,6 +24,18 @@ module Cccux
       load 'tasks/cccux.rake'
     end
     
+    # Configure assets for both Sprockets and Propshaft
+    initializer "cccux.assets" do |app|
+      # Add engine assets to the load path
+      app.config.assets.paths << root.join('app', 'assets', 'stylesheets')
+      app.config.assets.paths << root.join('app', 'assets', 'javascripts')
+      
+      # For Propshaft, ensure engine assets are available
+      if defined?(Propshaft)
+        app.config.assets.paths << root.join('app', 'assets')
+      end
+    end
+    
     # Include helpers in host application only when mounted
     config.to_prepare do
       # Only include helpers if the engine is actually mounted
@@ -33,7 +45,6 @@ module Cccux
         # ActionView::Base.include Cccux::AuthorizationHelper
       end
     end
-    
 
   end
 end
