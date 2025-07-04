@@ -1,9 +1,14 @@
  <div style="background-color: white; border: 1px solid #dee2e6; border-radius: 8px; padding: 1.5rem;">
     <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 1rem;">
       <h3 style="margin: 0; color: #495057;"><%= role.name %></h3>
-      <span style="background-color: #e9ecef; color: #495057; padding: 0.25rem 0.5rem; border-radius: 4px; font-size: 0.875rem;">
-        <%= pluralize(role.users.count, 'user') %>
-      </span>
+      <div style="display: flex; gap: 0.5rem;">
+        <span style="background-color: #fff3cd; color: #856404; padding: 0.25rem 0.5rem; border-radius: 4px; font-size: 0.875rem; font-weight: bold;">
+          Priority: <%= role.priority %>
+        </span>
+        <span style="background-color: #e9ecef; color: #495057; padding: 0.25rem 0.5rem; border-radius: 4px; font-size: 0.875rem;">
+          <%= pluralize(role.users.count, 'user') %>
+        </span>
+      </div>
     </div>
     
     <p style="color: #6c757d; margin-bottom: 1rem; font-size: 0.9rem;">

@@ -1,9 +1,9 @@
- <%= turbo_frame_tag "role_#{role.id}" do %>
+ <%= turbo_frame_tag role.new_record? ? "new_role_form" : "role_#{role.id}" do %>
   <div style="background-color: white; border: 1px solid #dee2e6; border-radius: 8px; padding: 1.5rem;">
     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
       <h3 style="margin: 0; color: #495057;"><%= role.new_record? ? 'Create New Role' : 'Edit Role' %></h3>
       <%= link_to "Cancel", cccux.roles_path, 
-          data: { turbo_frame: "role_#{role.id}" },
+          data: { turbo_frame: role.new_record? ? "new_role_form" : "role_#{role.id}" },
           style: "color: #6c757d; text-decoration: none; font-size: 0.9rem;" %>
     </div>
     
@@ -33,6 +33,18 @@
             placeholder: "Describe what this role can do and its responsibilities..." %>
       </div>
 
+      <div style="margin-bottom: 1.5rem;">
+        <%= form.label :priority, style: "display: block; margin-bottom: 0.5rem; font-weight: bold; color: #495057;" %>
+        <%= form.number_field :priority, 
+            style: "width: 100%; padding: 0.75rem; border: 1px solid #ced4da; border-radius: 4px; font-size: 1rem;",
+            placeholder: "Enter priority (lower numbers = higher priority)",
+            min: 1,
+            value: role.priority || 50 %>
+        <small style="color: #6c757d; font-size: 0.9rem; margin-top: 0.25rem; display: block;">
+          Priority determines role hierarchy. Lower numbers = higher priority (e.g., Admin=1, Manager=10, User=50)
+        </small>
+      </div>
+
       <% if role.new_record? %>
         <div style="background-color: #e7f3ff; border: 1px solid #b8daff; padding: 1rem; border-radius: 4px; margin-bottom: 1.5rem;">
           <h4 style="margin-top: 0; color: #004085; font-size: 1rem;">📝 Note about Permissions</h4>
@@ -47,7 +59,7 @@
         <%= form.submit role.new_record? ? "Create Role" : "Update Role", 
             style: "background-color: #007bff; color: white; padding: 0.75rem 1.5rem; border: none; border-radius: 4px; cursor: pointer; font-size: 1rem;" %>
         <%= link_to "Cancel", cccux.roles_path, 
-            data: { turbo_frame: "role_#{role.id}" },
+            data: { turbo_frame: role.new_record? ? "new_role_form" : "role_#{role.id}" },
             style: "color: #6c757d; text-decoration: none; padding: 0.75rem 1rem; font-size: 1rem;" %>
       </div>
     <% end %>

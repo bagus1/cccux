@@ -16,7 +16,7 @@ module Cccux
     end
     
     def new
-      @role = Cccux::Role.new
+      @role = Cccux::Role.new(priority: 50)
     end
     
     def create

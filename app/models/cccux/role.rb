@@ -12,6 +12,8 @@ module Cccux
     validates :name, presence: true, uniqueness: true
     validates :priority, presence: true, numericality: { only_integer: true, greater_than: 0 }
     
+    after_initialize :set_default_priority, if: :new_record?
+    
     scope :active, -> { where(active: true) }
     scope :ordered, -> { order(:priority, :name) }
     
@@ -77,6 +79,12 @@ module Cccux
       else
         nil
       end
+    end
+    
+    private
+    
+    def set_default_priority
+      self.priority ||= 50
     end
   end
 end 
