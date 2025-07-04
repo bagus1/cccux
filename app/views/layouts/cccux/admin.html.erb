@@ -9,6 +9,35 @@
     <%= stylesheet_link_tag "application", "data-turbo-track": "reload" %>
     <%= stylesheet_link_tag "stylesheets/cccux/application", "data-turbo-track": "reload" %>
     <%= javascript_importmap_tags %>
+    
+    <!-- Sortable.js for drag and drop -->
+    <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
+    
+    <!-- Drag and drop styles -->
+    <style>
+      .sortable-ghost {
+        opacity: 0.4;
+        background-color: #f8f9fa !important;
+      }
+      
+      .sortable-chosen {
+        box-shadow: 0 4px 8px rgba(0,0,0,0.2) !important;
+      }
+      
+      .sortable-drag {
+        opacity: 0.8;
+        transform: rotate(5deg);
+      }
+      
+      .role-card:hover {
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        border-color: #007bff;
+      }
+      
+      .drag-handle:hover {
+        color: #007bff !important;
+      }
+    </style>
   </head>
 
   <body>
@@ -35,6 +64,69 @@
       document.addEventListener('DOMContentLoaded', () => {
         console.log('📄 TRADITIONAL: Full page load');
       });
+      
+      // Initialize role drag and drop
+      function initializeRoleSorting() {
+        const rolesList = document.getElementById('roles_list');
+        if (rolesList && window.Sortable) {
+          new Sortable(rolesList, {
+            animation: 150,
+            ghostClass: 'sortable-ghost',
+            chosenClass: 'sortable-chosen',
+            dragClass: 'sortable-drag',
+            handle: '.role-card',
+            onEnd: function(evt) {
+              // Get the new order of role IDs
+              const roleIds = Array.from(rolesList.children).map(card => 
+                card.dataset.roleId
+              );
+              
+              // Send AJAX request to update priorities
+              const reorderUrl = rolesList.dataset.reorderUrl;
+              fetch(reorderUrl, {
+                method: 'PATCH',
+                headers: {
+                  'Content-Type': 'application/json',
+                  'X-CSRF-Token': document.querySelector('[name="csrf-token"]').content
+                },
+                body: JSON.stringify({ role_ids: roleIds })
+              })
+              .then(response => response.json())
+              .then(data => {
+                if (data.success) {
+                  console.log('✅ Role priorities updated successfully');
+                  // Update priority badges
+                  updatePriorityBadges(roleIds);
+                } else {
+                  console.error('❌ Failed to update role priorities:', data.error);
+                  // Revert the visual change
+                  location.reload();
+                }
+              })
+              .catch(error => {
+                console.error('❌ Error updating role priorities:', error);
+                location.reload();
+              });
+            }
+          });
+        }
+      }
+      
+      // Update priority badges after reordering
+      function updatePriorityBadges(roleIds) {
+        roleIds.forEach((roleId, index) => {
+          const card = document.querySelector(`[data-role-id="${roleId}"]`);
+          const priorityBadge = card.querySelector('.priority-badge');
+          if (priorityBadge) {
+            const newPriority = (index + 1) * 10;
+            priorityBadge.textContent = `Priority: ${newPriority}`;
+          }
+        });
+      }
+      
+      // Initialize on both DOMContentLoaded and turbo:load
+      document.addEventListener('DOMContentLoaded', initializeRoleSorting);
+      document.addEventListener('turbo:load', initializeRoleSorting);
     </script>
     
     <nav class="navbar" style="background-color: #f8f9fa; padding: 1rem; border-bottom: 1px solid #dee2e6;">

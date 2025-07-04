@@ -83,6 +83,25 @@ module Cccux
       @permission_matrix = build_permission_matrix
     end
     
+    def reorder
+      role_ids = params[:role_ids]
+      
+      if role_ids.present?
+        # Update priorities based on order (first item gets priority 1, second gets 10, etc.)
+        role_ids.each_with_index do |role_id, index|
+          role = Cccux::Role.find(role_id)
+          new_priority = (index + 1) * 10  # 10, 20, 30, 40, etc.
+          role.update!(priority: new_priority)
+        end
+        
+        render json: { success: true, message: 'Role priorities updated successfully' }
+      else
+        render json: { success: false, error: 'No role order provided' }, status: :bad_request
+      end
+    rescue StandardError => e
+      render json: { success: false, error: e.message }, status: :unprocessable_entity
+    end
+    
     private
     
     def set_role

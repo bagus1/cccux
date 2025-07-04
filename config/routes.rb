@@ -29,6 +29,7 @@ Cccux::Engine.routes.draw do
       end
       collection do
         get :search
+        patch :reorder
       end
     end
     

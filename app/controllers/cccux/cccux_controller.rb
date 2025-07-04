@@ -63,13 +63,19 @@ module Cccux
     def ensure_role_manager
       # Check if user is authenticated
       unless defined?(current_user) && current_user&.persisted?
-        redirect_to main_app.root_path, alert: 'You must be logged in to access the admin interface.'
+        respond_to do |format|
+          format.html { redirect_to main_app.root_path, alert: 'You must be logged in to access the admin interface.' }
+          format.json { render json: { success: false, error: 'You must be logged in to access the admin interface.' }, status: :unauthorized }
+        end
         return
       end
       
       # Check if user has Role Manager role
       unless current_user.has_role?('Role Manager')
-        redirect_to main_app.root_path, alert: 'Access denied. Only Role Managers can access the admin interface.'
+        respond_to do |format|
+          format.html { redirect_to main_app.root_path, alert: 'Access denied. Only Role Managers can access the admin interface.' }
+          format.json { render json: { success: false, error: 'Access denied. Only Role Managers can access the admin interface.' }, status: :forbidden }
+        end
         return
       end
     end

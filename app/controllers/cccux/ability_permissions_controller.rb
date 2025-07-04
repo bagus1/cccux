@@ -197,14 +197,41 @@ module Cccux
         # Convert subject to potential route patterns
         resource_name = subject.underscore.pluralize
         
-        # Look through Rails routes for this resource
+        # For CCCUX models, also check the engine routes
+        if subject.start_with?('Cccux::')
+          cccux_resource_name = subject.gsub('Cccux::', '').underscore.pluralize
+          
+          # Look through CCCUX engine routes for this resource
+          Cccux::Engine.routes.routes.each do |route|
+            next unless route.path.spec.to_s.include?(cccux_resource_name)
+            
+            # Extract action from route
+            if route.defaults[:action]
+              action = route.defaults[:action]
+              # Map HTTP verbs to standard actions and include custom actions
+              case action
+              when 'index' then actions << 'read'
+              when 'show' then actions << 'read'
+              when 'create' then actions << 'create'
+              when 'update' then actions << 'update'
+              when 'destroy' then actions << 'destroy'
+              when 'edit', 'new' then next # Skip these as they're UI actions
+              else
+                # Custom actions like 'reorder', 'toggle_active', etc.
+                actions << action
+              end
+            end
+          end
+        end
+        
+        # Also look through main Rails routes for this resource
         Rails.application.routes.routes.each do |route|
           next unless route.path.spec.to_s.include?(resource_name)
           
           # Extract action from route
           if route.defaults[:action]
             action = route.defaults[:action]
-            # Map HTTP verbs to standard actions
+            # Map HTTP verbs to standard actions and include custom actions
             case action
             when 'index' then actions << 'read'
             when 'show' then actions << 'read'
@@ -213,7 +240,8 @@ module Cccux
             when 'destroy' then actions << 'destroy'
             when 'edit', 'new' then next # Skip these as they're UI actions
             else
-              actions << action # Custom actions
+              # Custom actions
+              actions << action
             end
           end
         end

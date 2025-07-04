@@ -1,8 +1,15 @@
- <div style="background-color: white; border: 1px solid #dee2e6; border-radius: 8px; padding: 1.5rem;">
-    <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 1rem;">
+ <div class="role-card" 
+      data-role-id="<%= role.id %>"
+      style="background-color: white; border: 1px solid #dee2e6; border-radius: 8px; padding: 1.5rem; cursor: move; transition: all 0.2s ease; position: relative;">
+   
+   <!-- Drag Handle -->
+   <div class="drag-handle" style="position: absolute; left: 0.5rem; top: 50%; transform: translateY(-50%); color: #adb5bd; font-size: 1.2rem;">
+     ⋮⋮
+   </div>
+    <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 1rem; margin-left: 2rem;">
       <h3 style="margin: 0; color: #495057;"><%= role.name %></h3>
       <div style="display: flex; gap: 0.5rem;">
-        <span style="background-color: #fff3cd; color: #856404; padding: 0.25rem 0.5rem; border-radius: 4px; font-size: 0.875rem; font-weight: bold;">
+        <span class="priority-badge" style="background-color: #fff3cd; color: #856404; padding: 0.25rem 0.5rem; border-radius: 4px; font-size: 0.875rem; font-weight: bold;">
           Priority: <%= role.priority %>
         </span>
         <span style="background-color: #e9ecef; color: #495057; padding: 0.25rem 0.5rem; border-radius: 4px; font-size: 0.875rem;">
@@ -11,10 +18,10 @@
       </div>
     </div>
     
-    <p style="color: #6c757d; margin-bottom: 1rem; font-size: 0.9rem;">
+    <p style="color: #6c757d; margin-bottom: 1rem; font-size: 0.9rem; margin-left: 2rem;">
       <%= role.description %>
     </p>
-    <div style="margin-bottom: 1.5rem;">
+    <div style="margin-bottom: 1.5rem; margin-left: 2rem;">
       <strong style="color: #495057; font-size: 0.9rem;">Permissions:</strong>
       <div style="margin-top: 0.5rem;">
         <% if role.ability_permissions.any? %>
@@ -34,7 +41,7 @@
       </div>
     </div>
     
-    <div style="display: flex; gap: 0.5rem;">
+    <div style="display: flex; gap: 0.5rem; margin-left: 2rem;">
       <%= link_to "View", cccux.role_path(role), 
           style: "color: #007bff; text-decoration: none; font-size: 0.9rem;" %>
       <%= link_to "Edit", cccux.edit_role_path(role), 
