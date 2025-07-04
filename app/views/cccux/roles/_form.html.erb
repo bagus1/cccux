@@ -34,6 +34,17 @@
       </div>
 
       <div style="margin-bottom: 1.5rem;">
+        <label style="display: flex; align-items: center; cursor: pointer;">
+          <%= form.check_box :active, { checked: role.active.nil? ? true : role.active }, 
+              style: "margin-right: 0.5rem; transform: scale(1.2);" %>
+          <span style="font-weight: bold; color: #495057;">Active Role</span>
+        </label>
+        <small style="color: #6c757d; font-size: 0.9rem; margin-top: 0.25rem; display: block; margin-left: 1.5rem;">
+          Only active roles can be assigned to users. Inactive roles are hidden from user assignment forms.
+        </small>
+      </div>
+
+      <div style="margin-bottom: 1.5rem;">
         <%= form.label :priority, style: "display: block; margin-bottom: 0.5rem; font-weight: bold; color: #495057;" %>
         <%= form.number_field :priority, 
             style: "width: 100%; padding: 0.75rem; border: 1px solid #ced4da; border-radius: 4px; font-size: 1rem;",
