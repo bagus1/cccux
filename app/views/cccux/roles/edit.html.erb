@@ -72,6 +72,16 @@
           </div>
         </div>
       </div>
+
+      <!-- Implementation Requirements Alert (initially hidden) -->
+      <div id="implementation-alert" style="display: none; background-color: #fff3cd; border: 1px solid #ffeaa7; padding: 1rem; border-radius: 4px; margin-bottom: 1.5rem;">
+        <h6 style="margin: 0 0 0.5rem 0; color: #856404; font-weight: bold;">
+          <span style="margin-right: 0.5rem;">⚠️</span>Implementation Required
+        </h6>
+        <div id="implementation-message" style="font-size: 0.9rem; color: #856404; line-height: 1.4;">
+          <!-- Dynamic content will be inserted here -->
+        </div>
+      </div>
       
       <% if @available_permissions.any? %>
         <% @available_permissions.each do |subject, permissions| %>
@@ -188,25 +198,37 @@
   <!-- Enhanced JavaScript for permission interactions -->
   <script>
     document.addEventListener('DOMContentLoaded', function() {
-      // Handle permission checkbox changes
-      document.querySelectorAll('.permission-checkbox').forEach(function(checkbox) {
-        checkbox.addEventListener('change', function() {
-          updatePermissionControls(this.dataset.permissionId);
+              // Handle permission checkbox changes
+        document.querySelectorAll('.permission-checkbox').forEach(function(checkbox) {
+          checkbox.addEventListener('change', function() {
+            updatePermissionControls(this.dataset.permissionId);
+            updateImplementationAlert();
+          });
         });
-      });
 
-      // Handle context radio button changes
-      document.querySelectorAll('.context-radio').forEach(function(radio) {
-        radio.addEventListener('change', function() {
-          const permissionId = this.name.match(/\[(\d+)\]/)[1];
-          updateScopeVisibility(permissionId);
+              // Handle context radio button changes
+        document.querySelectorAll('.context-radio').forEach(function(radio) {
+          radio.addEventListener('change', function() {
+            const permissionId = this.name.match(/\[(\d+)\]/)[1];
+            updateScopeVisibility(permissionId);
+            updateImplementationAlert();
+          });
         });
-      });
+
+        // Handle scope radio button changes  
+        document.querySelectorAll('.scope-radio').forEach(function(radio) {
+          radio.addEventListener('change', function() {
+            updateImplementationAlert();
+          });
+        });
 
       // Initialize all permission controls on page load
       document.querySelectorAll('.permission-checkbox').forEach(function(checkbox) {
         updatePermissionControls(checkbox.dataset.permissionId);
       });
+      
+      // Initialize implementation alert
+      updateImplementationAlert();
 
       function updatePermissionControls(permissionId) {
         const checkbox = document.querySelector(`input[data-permission-id="${permissionId}"]`);
@@ -290,11 +312,72 @@
         }
       }
 
-      // Add CSS for muted text
+      function updateImplementationAlert() {
+        const alertBox = document.getElementById('implementation-alert');
+        const messageDiv = document.getElementById('implementation-message');
+        
+        // Check if any contextual or owned permissions are selected
+        const hasContextual = document.querySelectorAll('input[value="scoped"]:checked').length > 0;
+        const hasOwnedOnly = document.querySelectorAll('input[value="owned"]:checked').length > 0;
+        const hasOwnedScope = document.querySelectorAll('input[name*="permission_owned"][value="true"]:checked').length > 0;
+        
+        if (hasContextual || hasOwnedOnly || hasOwnedScope) {
+          let messages = [];
+          
+          if (hasContextual) {
+            messages.push(`
+              <div style="margin-bottom: 0.75rem;">
+                <strong>For Contextual Access:</strong>
+                <ul style="margin: 0.25rem 0 0 1.5rem; padding: 0;">
+                  <li>Add <code>override_current_ability</code> method to your controller</li>
+                  <li>Include <code>Cccux::ContextAware</code> concern in your controller</li>
+                  <li>Add <code>in_current_scope?</code> method to your model</li>
+                  <li>Include <code>Cccux::ScopedOwnership</code> concern in your model</li>
+                </ul>
+              </div>
+            `);
+          }
+          
+          if (hasOwnedOnly || hasOwnedScope) {
+            messages.push(`
+              <div style="margin-bottom: 0.75rem;">
+                <strong>For Owned Access:</strong>
+                <ul style="margin: 0.25rem 0 0 1.5rem; padding: 0;">
+                  <li>Ensure your model has a <code>user_id</code> or owner association</li>
+                  <li>Add <code>belongs_to :user</code> (or custom owner) to your model</li>
+                  <li>Include <code>Cccux::ScopedOwnership</code> concern for ownership checks</li>
+                </ul>
+              </div>
+            `);
+          }
+          
+          messages.push(`
+            <div style="background-color: #e8f4f8; padding: 0.75rem; border-radius: 4px; margin-top: 0.5rem;">
+              <strong>💡 Quick Setup:</strong> Use <code>Cccux::NestedAuthorizationController</code> and <code>Cccux::ScopedOwnership</code> 
+              concerns for automatic setup of most requirements.
+            </div>
+          `);
+          
+          messageDiv.innerHTML = messages.join('');
+          alertBox.style.display = 'block';
+        } else {
+          alertBox.style.display = 'none';
+        }
+      }
+
+      // Add CSS for muted text and code styling
       const style = document.createElement('style');
       style.textContent = `
         .text-muted {
           color: #6c757d !important;
+        }
+        code {
+          background-color: #f8f9fa;
+          padding: 0.2rem 0.4rem;
+          border-radius: 3px;
+          font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+          font-size: 0.875em;
+          color: #e83e8c;
         }
       `;
       document.head.appendChild(style);
