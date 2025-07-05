@@ -162,5 +162,67 @@ module Cccux
     def can_destroy?(subject)
       can?(:destroy, subject)
     end
+
+    # Check if user can perform action on resource in global context
+    def can_in_global_context?(action, resource)
+      current_ability.can?(action, resource) && 
+        has_context_permission?(action, resource.class, 'global')
+    end
+    
+    # Check if user can perform action on resource in owned context
+    def can_in_owned_context?(action, resource)
+      current_ability.can?(action, resource) && 
+        has_context_permission?(action, resource.class, 'owned')
+    end
+    
+    # Check if user can perform action on resource in scoped context
+    def can_in_scoped_context?(action, resource)
+      current_ability.can?(action, resource) && 
+        has_context_permission?(action, resource.class, 'scoped')
+    end
+    
+    # Check if user can access the current route context
+    def can_access_current_context?(action, resource_class)
+      context = determine_current_context
+      case context
+      when 'global'
+        can_in_global_context?(action, resource_class)
+      when 'owned'
+        can_in_owned_context?(action, resource_class)
+      when 'scoped'
+        can_in_scoped_context?(action, resource_class)
+      else
+        current_ability.can?(action, resource_class)
+      end
+    end
+    
+    # Determine the current route context
+    def determine_current_context
+      # Check if we're in a nested route (e.g., /store/1/orders)
+      if params[:store_id].present?
+        'scoped'
+      elsif params[:user_id].present?
+        'owned'
+      else
+        'global'
+      end
+    end
+    
+    private
+    
+    def has_context_permission?(action, resource_class, context)
+      return false unless current_user&.persisted?
+      
+      # Check if user has the permission in the specified context
+      user_roles = Cccux::UserRole.active.for_user(current_user).includes(:role)
+      
+      user_roles.any? do |user_role|
+        role = user_role.role
+        role.role_abilities.joins(:ability_permission)
+            .where(cccux_ability_permissions: { action: action, subject: resource_class.name, active: true })
+            .where(context: context)
+            .exists?
+      end
+    end
   end
 end 

@@ -23,10 +23,10 @@ end
 
 ## Authorization Patterns
 
-### Primary: `Model.owned`
+### Primary: `Model.owned(ability)`
 ```ruby
 def index
-  @users = User.owned.includes(:cccux_roles)
+  @users = User.owned(current_ability).includes(:cccux_roles)
 end
 ```
 

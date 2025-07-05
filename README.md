@@ -105,6 +105,8 @@ end
 <% end %>
 ```
 
+
+
 ## Authorization Patterns
 
 ### Primary Pattern: `Model.owned`
@@ -114,7 +116,7 @@ Use the `owned` scope for automatic ownership filtering:
 ```ruby
 class UsersController < Cccux::AuthorizationController
   def index
-    @users = User.owned.includes(:cccux_roles)
+    @users = User.owned(current_ability).includes(:cccux_roles)
   end
 end
 ```

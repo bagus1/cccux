@@ -97,30 +97,67 @@
                     </span>
                   </div>
                   
-                  <!-- Ownership Scope (only show for models that support ownership and when permission is checked) -->
-                  <% if permission.supports_ownership? && permission.model_supports_ownership? %>
-                    <div style="margin-left: auto; display: flex; align-items: center; gap: 0.5rem;">
-                      <span style="font-size: 0.8rem; color: #6c757d;">Scope:</span>
+                  <!-- Context and Ownership Controls -->
+                  <div style="margin-left: auto; display: flex; align-items: center; gap: 1rem;">
+                    <!-- Context Selection -->
+                    <div style="display: flex; align-items: center; gap: 0.5rem;">
+                      <span style="font-size: 0.8rem; color: #6c757d;">Context:</span>
                       
-                      <%= radio_button_tag "role[permission_owned][#{permission.id}]", "false", 
-                          !is_owned, 
-                          id: "owned_false_#{permission.id}",
+                      <% current_context = role_ability&.context || 'global' %>
+                      
+                      <%= radio_button_tag "role[permission_context][#{permission.id}]", "global", 
+                          current_context == 'global', 
+                          id: "context_global_#{permission.id}",
                           style: "margin-right: 0.25rem;",
                           disabled: !is_assigned %>
-                      <%= label_tag "owned_false_#{permission.id}", "All", 
+                      <%= label_tag "context_global_#{permission.id}", "Global", 
                           style: "font-size: 0.8rem; cursor: pointer; margin-right: 0.5rem;",
                           class: is_assigned ? "" : "text-muted" %>
                       
-                      <%= radio_button_tag "role[permission_owned][#{permission.id}]", "true", 
-                          is_owned, 
-                          id: "owned_true_#{permission.id}",
+                      <%= radio_button_tag "role[permission_context][#{permission.id}]", "owned", 
+                          current_context == 'owned', 
+                          id: "context_owned_#{permission.id}",
                           style: "margin-right: 0.25rem;",
                           disabled: !is_assigned %>
-                      <%= label_tag "owned_true_#{permission.id}", "Owned", 
+                      <%= label_tag "context_owned_#{permission.id}", "Owned", 
+                          style: "font-size: 0.8rem; cursor: pointer; margin-right: 0.5rem;",
+                          class: is_assigned ? "" : "text-muted" %>
+                      
+                      <%= radio_button_tag "role[permission_context][#{permission.id}]", "scoped", 
+                          current_context == 'scoped', 
+                          id: "context_scoped_#{permission.id}",
+                          style: "margin-right: 0.25rem;",
+                          disabled: !is_assigned %>
+                      <%= label_tag "context_scoped_#{permission.id}", "Scoped", 
                           style: "font-size: 0.8rem; cursor: pointer;",
                           class: is_assigned ? "" : "text-muted" %>
                     </div>
-                  <% end %>
+                    
+                    <!-- Ownership Scope (only show for models that support ownership and when permission is checked) -->
+                    <% if permission.supports_ownership? && permission.model_supports_ownership? %>
+                      <div style="display: flex; align-items: center; gap: 0.5rem;">
+                        <span style="font-size: 0.8rem; color: #6c757d;">Scope:</span>
+                        
+                        <%= radio_button_tag "role[permission_owned][#{permission.id}]", "false", 
+                            !is_owned, 
+                            id: "owned_false_#{permission.id}",
+                            style: "margin-right: 0.25rem;",
+                            disabled: !is_assigned %>
+                        <%= label_tag "owned_false_#{permission.id}", "All", 
+                            style: "font-size: 0.8rem; cursor: pointer; margin-right: 0.5rem;",
+                            class: is_assigned ? "" : "text-muted" %>
+                        
+                        <%= radio_button_tag "role[permission_owned][#{permission.id}]", "true", 
+                            is_owned, 
+                            id: "owned_true_#{permission.id}",
+                            style: "margin-right: 0.25rem;",
+                            disabled: !is_assigned %>
+                        <%= label_tag "owned_true_#{permission.id}", "Owned", 
+                            style: "font-size: 0.8rem; cursor: pointer;",
+                            class: is_assigned ? "" : "text-muted" %>
+                      </div>
+                    <% end %>
+                  </div>
                 </div>
               <% end %>
             </div>
@@ -142,15 +179,21 @@
       document.querySelectorAll('.permission-checkbox').forEach(function(checkbox) {
         checkbox.addEventListener('change', function() {
           const permissionId = this.dataset.permissionId;
+          const contextControls = document.querySelectorAll(`input[name="role[permission_context][${permissionId}]"]`);
+          const contextLabels = document.querySelectorAll(`label[for^="context_${permissionId}"]`);
           const ownedControls = document.querySelectorAll(`input[name="role[permission_owned][${permissionId}]"]`);
           const ownedLabels = document.querySelectorAll(`label[for^="owned_${permissionId}"]`);
           
           if (this.checked) {
-            // Enable ownership controls
+            // Enable context and ownership controls
+            contextControls.forEach(control => control.disabled = false);
+            contextLabels.forEach(label => label.classList.remove('text-muted'));
             ownedControls.forEach(control => control.disabled = false);
             ownedLabels.forEach(label => label.classList.remove('text-muted'));
           } else {
-            // Disable ownership controls
+            // Disable context and ownership controls
+            contextControls.forEach(control => control.disabled = true);
+            contextLabels.forEach(label => label.classList.add('text-muted'));
             ownedControls.forEach(control => control.disabled = true);
             ownedLabels.forEach(label => label.classList.add('text-muted'));
           }

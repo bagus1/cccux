@@ -45,23 +45,157 @@ module Cccux
         next unless model_class
         
         # Check if this permission has already been defined by a higher priority role
-        permission_key = "#{permission.action}:#{permission.subject}"
+        permission_key = "#{permission.action}:#{permission.subject}:#{role_ability.context}"
         next if @defined_permissions.include?(permission_key)
         
         # Mark this permission as defined
         @defined_permissions.add(permission_key)
         
-        # Define the ability
+        # Define the ability based on context and ownership
+        apply_contextual_ability(role_ability, permission, model_class, user)
+      end
+    end
+    
+    def apply_contextual_ability(role_ability, permission, model_class, user)
+      action = permission.action.to_sym
+      
+      case role_ability.context
+      when 'global'
+        # Global access - can access the resource from any context
         if role_ability.owned && user&.persisted?
-          # User can only access their own records (only applies to authenticated users)
-          apply_owned_ability(permission.action.to_sym, model_class, user)
+          apply_owned_ability(action, model_class, user)
         else
-          # User can access all records (includes Guest users with read-only access)
-          can permission.action.to_sym, model_class
+          can action, model_class
+        end
+        
+      when 'owned'
+        # Owned context only - can only access through owned relationships
+        if role_ability.owned && user&.persisted?
+          apply_owned_ability(action, model_class, user)
+        else
+          # For non-owned permissions in owned context, still restrict to owned relationships
+          apply_owned_ability(action, model_class, user)
+        end
+        
+      when 'scoped'
+        # Scoped context only - can only access through specific scoped routes
+        if role_ability.owned && user&.persisted?
+          apply_scoped_owned_ability(action, model_class, user)
+        else
+          apply_scoped_ability(action, model_class, user)
+        end
+        
+      else
+        # Default to global behavior for backward compatibility
+        if role_ability.owned && user&.persisted?
+          apply_owned_ability(action, model_class, user)
+        else
+          can action, model_class
         end
       end
     end
     
+    def apply_scoped_ability(action, model_class, user)
+      # For scoped context, we need to check the current request context
+      # This will be handled by the controller using can? checks
+      can action, model_class do |record|
+        # Check if we're in a scoped route context
+        current_context = determine_current_context
+        
+        case current_context
+        when 'store_scoped'
+          # Check if the record belongs to the current store context
+          store_id = Thread.current[:current_store_id]
+          return false unless store_id
+          
+          # Assuming Order belongs_to :store
+          if record.respond_to?(:store_id)
+            record.store_id == store_id
+          else
+            false
+          end
+          
+        when 'user_scoped'
+          # Check if the record belongs to the current user context
+          user_id = Thread.current[:current_user_id]
+          return false unless user_id
+          
+          # Assuming Order belongs_to :user
+          if record.respond_to?(:user_id)
+            record.user_id == user_id
+          else
+            false
+          end
+          
+        else
+          # Not in a scoped context - deny access
+          false
+        end
+      end
+    end
+    
+    def apply_scoped_owned_ability(action, model_class, user)
+      # For scoped owned context, combine scoping with ownership
+      can action, model_class do |record|
+        # First check ownership
+        unless record_owned_by_user?(record, user)
+          return false
+        end
+        
+        # Then check scoped context
+        current_context = determine_current_context
+        
+        case current_context
+        when 'store_scoped'
+          # Check if the record belongs to the current store context
+          store_id = Thread.current[:current_store_id]
+          return false unless store_id
+          
+          # Assuming Order belongs_to :store
+          if record.respond_to?(:store_id)
+            record.store_id == store_id
+          else
+            false
+          end
+          
+        when 'user_scoped'
+          # Check if the record belongs to the current user context
+          user_id = Thread.current[:current_user_id]
+          return false unless user_id
+          
+          # Assuming Order belongs_to :user
+          if record.respond_to?(:user_id)
+            record.user_id == user_id
+          else
+            false
+          end
+          
+        else
+          # Not in a scoped context - deny access
+          false
+        end
+      end
+    end
+    
+    private
+    
+    def determine_current_context
+      # This should be set by the controller based on the current route
+      Thread.current[:current_context] || 'global'
+    end
+    
+    def record_owned_by_user?(record, user)
+      if record.respond_to?(:owned_by?)
+        record.owned_by?(user)
+      elsif record.respond_to?(:user_id)
+        record.user_id == user.id
+      elsif record.respond_to?(:creator_id)
+        record.creator_id == user.id
+      else
+        false
+      end
+    end
+
     def apply_owned_ability(action, model_class, user)
       # Try to detect ownership pattern automatically
       if model_class.respond_to?(:owned_by?)

@@ -100,14 +100,14 @@ end
 
 ## Authorization Patterns
 
-### Primary Pattern: `Model.owned`
+### Primary: `Model.owned(ability)`
 
 Use the `owned` scope for automatic ownership filtering:
 
 ```ruby
 class UsersController < Cccux::AuthorizationController
   def index
-    @users = User.owned.includes(:cccux_roles)
+    @users = User.owned(current_ability).includes(:cccux_roles)
   end
   
   def show
@@ -116,7 +116,7 @@ class UsersController < Cccux::AuthorizationController
 end
 ```
 
-### Legacy Pattern: `accessible_by(current_ability)`
+### Legacy: `accessible_by(current_ability)`
 
 For complex queries that can't use the `owned` scope:
 
@@ -127,6 +127,8 @@ class UsersController < Cccux::AuthorizationController
   end
 end
 ```
+
+**Note:** The `owned` scope requires an explicit ability parameter for reliability. This ensures proper authorization regardless of thread context.
 
 ### Custom Authorization
 
