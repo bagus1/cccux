@@ -3,9 +3,6 @@ module Cccux
     # CanCanCan authorization - shared across all CCCUX controllers
     include CanCan::ControllerAdditions
     
-    # Context awareness for scoped permissions
-    include Cccux::ContextAware
-    
     # Handle CanCan authorization errors gracefully
     rescue_from CanCan::AccessDenied do |exception|
       redirect_to main_app.root_path, alert: 'Access denied.'

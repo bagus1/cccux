@@ -4,8 +4,9 @@ module Cccux
   class Ability
     include CanCan::Ability
 
-    def initialize(user)
+    def initialize(user, context = nil)
       user ||= User.new # guest user (not logged in)
+      @context = context || {}
       
       # Track which permissions have been defined to avoid conflicts
       @defined_permissions = Set.new
@@ -78,7 +79,7 @@ module Cccux
         end
         
       when 'scoped'
-        # Scoped context only - can only access through specific scoped routes
+        # Scoped context only - can only access through specific route contexts
         if role_ability.owned && user&.persisted?
           apply_scoped_owned_ability(action, model_class, user)
         else
@@ -96,39 +97,13 @@ module Cccux
     end
     
     def apply_scoped_ability(action, model_class, user)
-      # For scoped context, we need to check the current request context
-      # This will be handled by the controller using can? checks
+      # For scoped context, delegate to the model to determine if it's in the current scope
       can action, model_class do |record|
-        # Check if we're in a scoped route context
-        current_context = determine_current_context
-        
-        case current_context
-        when 'store_scoped'
-          # Check if the record belongs to the current store context
-          store_id = Thread.current[:current_store_id]
-          return false unless store_id
-          
-          # Assuming Order belongs_to :store
-          if record.respond_to?(:store_id)
-            record.store_id == store_id
-          else
-            false
-          end
-          
-        when 'user_scoped'
-          # Check if the record belongs to the current user context
-          user_id = Thread.current[:current_user_id]
-          return false unless user_id
-          
-          # Assuming Order belongs_to :user
-          if record.respond_to?(:user_id)
-            record.user_id == user_id
-          else
-            false
-          end
-          
+        if model_class.respond_to?(:in_current_scope?)
+          model_class.in_current_scope?(record, user, @context)
         else
-          # Not in a scoped context - deny access
+          # Fallback: if model doesn't implement in_current_scope?, deny access
+          Rails.logger.warn "CCCUX: #{model_class.name} doesn't implement in_current_scope? method for scoped permissions"
           false
         end
       end
@@ -143,59 +118,15 @@ module Cccux
         end
         
         # Then check scoped context
-        current_context = determine_current_context
-        
-        case current_context
-        when 'store_scoped'
-          # Check if the record belongs to the current store context
-          store_id = Thread.current[:current_store_id]
-          return false unless store_id
-          
-          # Assuming Order belongs_to :store
-          if record.respond_to?(:store_id)
-            record.store_id == store_id
-          else
-            false
-          end
-          
-        when 'user_scoped'
-          # Check if the record belongs to the current user context
-          user_id = Thread.current[:current_user_id]
-          return false unless user_id
-          
-          # Assuming Order belongs_to :user
-          if record.respond_to?(:user_id)
-            record.user_id == user_id
-          else
-            false
-          end
-          
+        if model_class.respond_to?(:in_current_scope?)
+          model_class.in_current_scope?(record, user, @context)
         else
-          # Not in a scoped context - deny access
+          Rails.logger.warn "CCCUX: #{model_class.name} doesn't implement in_current_scope? method for scoped permissions"
           false
         end
       end
     end
     
-    private
-    
-    def determine_current_context
-      # This should be set by the controller based on the current route
-      Thread.current[:current_context] || 'global'
-    end
-    
-    def record_owned_by_user?(record, user)
-      if record.respond_to?(:owned_by?)
-        record.owned_by?(user)
-      elsif record.respond_to?(:user_id)
-        record.user_id == user.id
-      elsif record.respond_to?(:creator_id)
-        record.creator_id == user.id
-      else
-        false
-      end
-    end
-
     def apply_owned_ability(action, model_class, user)
       # Try to detect ownership pattern automatically
       if model_class.respond_to?(:owned_by?)
@@ -237,6 +168,18 @@ module Cccux
       # If the model doesn't exist, we can't define permissions for it
       Rails.logger.warn "CCCUX: Model '#{subject}' not found, skipping permission"
       nil
+    end
+    
+    def record_owned_by_user?(record, user)
+      if record.respond_to?(:owned_by?)
+        record.owned_by?(user)
+      elsif record.respond_to?(:user_id)
+        record.user_id == user.id
+      elsif record.respond_to?(:creator_id)
+        record.creator_id == user.id
+      else
+        false
+      end
     end
   end
 end

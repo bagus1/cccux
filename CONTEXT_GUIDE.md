@@ -66,6 +66,16 @@ class Order < ApplicationRecord
   def self.scoped_for_user(user)
     where(user_id: user.id)
   end
+  
+  def self.in_current_scope?(record, user, context)
+    if context[:store_id]
+      record.store_id.to_s == context[:store_id].to_s
+    elsif context[:user_id]
+      record.user_id.to_s == context[:user_id].to_s
+    else
+      false
+    end
+  end
 end
 
 # app/models/store.rb
@@ -105,6 +115,11 @@ class Stores::OrdersController < Cccux::AuthorizationController
     @store = Store.find(params[:store_id])
     authorize! :read, @store
   end
+  
+  def current_ability
+    context = { store_id: params[:store_id] }
+    @current_ability ||= Cccux::Ability.new(current_user, context)
+  end
 end
 
 # app/controllers/users/orders_controller.rb (Owned access)
@@ -120,6 +135,11 @@ class Users::OrdersController < Cccux::AuthorizationController
   def set_user
     @user = User.find(params[:user_id])
     authorize! :read, @user
+  end
+  
+  def current_ability
+    context = { user_id: params[:user_id] }
+    @current_ability ||= Cccux::Ability.new(current_user, context)
   end
 end
 ```
@@ -149,13 +169,19 @@ end
 
 ## How It Works
 
-### Automatic Context Detection
+### Context Detection
 
-CCCUX automatically detects the context based on your route parameters:
+The context is determined by the controller's `current_ability` method:
 
-- `/orders` → `global` context
-- `/stores/1/orders` → `store_scoped` context (store_id = 1)
-- `/users/1/orders` → `user_scoped` context (user_id = 1)
+```ruby
+def current_ability
+  context = {}
+  context[:store_id] = params[:store_id] if params[:store_id]
+  context[:user_id] = params[:user_id] if params[:user_id]
+  
+  @current_ability ||= Cccux::Ability.new(current_user, context)
+end
+```
 
 ### Permission Checking
 
@@ -175,9 +201,10 @@ When a user tries to access a resource, CCCUX checks:
 
 #### Store Manager Accessing `/stores/1/orders`
 1. ✅ Has "update" permission on Order  
-2. ✅ Context is "store_scoped" (matches role setting)
+2. ✅ Context is "scoped" (matches role setting)
 3. ✅ Scope is "all" (matches role setting)
-4. **Result**: Can update any order in store 1
+4. ✅ Record is in current scope (store_id matches)
+5. **Result**: Can update any order in store 1
 
 #### Store Manager Accessing `/orders` (Global)
 1. ✅ Has "update" permission on Order
@@ -186,7 +213,7 @@ When a user tries to access a resource, CCCUX checks:
 
 #### User Accessing `/users/1/orders`
 1. ✅ Has "update" permission on Order
-2. ✅ Context is "user_scoped" (matches role setting)  
+2. ✅ Context is "owned" (matches role setting)  
 3. ✅ Scope is "owned" (matches role setting)
 4. **Result**: Can update their own orders
 
@@ -198,10 +225,22 @@ You can extend the context system for custom scenarios:
 
 ```ruby
 # In your controller
-def set_current_context
-  if params[:department_id].present?
-    Thread.current[:current_context] = 'department_scoped'
-    Thread.current[:current_department_id] = params[:department_id]
+def current_ability
+  context = {}
+  context[:department_id] = params[:department_id] if params[:department_id]
+  context[:project_id] = params[:project_id] if params[:project_id]
+  
+  @current_ability ||= Cccux::Ability.new(current_user, context)
+end
+
+# In your model
+def self.in_current_scope?(record, user, context)
+  if context[:department_id]
+    record.department_id.to_s == context[:department_id].to_s
+  elsif context[:project_id]
+    record.project_id.to_s == context[:project_id].to_s
+  else
+    false
   end
 end
 ```
@@ -234,16 +273,16 @@ Use the context-aware helpers in your views:
 
 ### "Access Denied" in Scoped Context
 - Check that the user's role has the correct context setting
-- Verify the route parameters match the expected context
-- Ensure the controller includes `Cccux::ContextAware`
+- Verify the `in_current_scope?` method is implemented in your model
+- Ensure the controller's `current_ability` method passes the correct context
 
 ### Context Not Detected
-- Make sure your controller inherits from a CCCUX controller
+- Make sure your controller overrides `current_ability` to pass context
 - Check that route parameters are named correctly (e.g., `store_id`, `user_id`)
-- Verify the `ContextAware` concern is included
+- Verify the `in_current_scope?` method handles the context properly
 
 ### Performance Considerations
-- Context detection happens on every request
+- Context is passed explicitly, no global state
 - Consider caching context information for complex scenarios
 - Use database indexes on foreign key columns for scoped queries
 
@@ -254,5 +293,6 @@ Use the context-aware helpers in your views:
 3. **Document context requirements** for each role
 4. **Use consistent route naming** conventions
 5. **Consider security implications** of each context type
+6. **Keep context simple** - avoid complex nested contexts
 
-This context system provides powerful, flexible authorization that adapts to your application's structure and business requirements. 
+This context system provides powerful, flexible authorization that adapts to your application's structure and business requirements without relying on global state. 
