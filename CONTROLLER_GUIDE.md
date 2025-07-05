@@ -1,143 +1,98 @@
 # CCCUX Controller Guide
 
-This guide explains the controller inheritance patterns, authorization requirements, and best practices for using CCCUX in your Rails application.
+This guide explains how to use CCCUX controllers in your Rails application for proper authorization and resource management.
 
-## Controller Inheritance Hierarchy
+## Controller Hierarchy
 
-CCCUX provides several base controller classes to choose from depending on your needs:
+CCCUX provides three controller classes with increasing functionality:
 
-### 1. CCCUX Admin Controllers (Engine Controllers)
+### 1. `Cccux::ApplicationController`
+**Base controller with shared functionality:**
+- CanCanCan integration (`include CanCan::ControllerAdditions`)
+- Common error handling (`CanCan::AccessDenied`, `ActiveRecord::RecordNotFound`)
+- CCCUX Ability class integration (`current_ability`)
+- User setup (`set_current_user`)
+- Devise parameter sanitization for `first_name` and `last_name`
 
-For controllers within the CCCUX engine that manage roles, permissions, and users:
+**Use when:** You need basic CCCUX functionality without automatic resource loading.
 
-```ruby
-module Cccux
-  class YourController < CccuxController
-    # Automatically includes:
-    # - CanCanCan authorization
-    # - CCCUX admin layout
-    # - Error handling for authorization failures
-    # - Automatic resource loading and authorization
-  end
-end
-```
+### 2. `Cccux::AuthorizationController`
+**Host app authorization controller:**
+- Inherits all functionality from `ApplicationController`
+- Uses host app layout (`layout 'application'`)
+- Automatic resource loading and authorization (`load_and_authorize_resource`)
 
-**Features:**
-- Uses `cccux/admin` layout
-- Includes `load_and_authorize_resource` by default
-- Handles authorization errors gracefully
-- Overrides `current_ability` to use `Cccux::Ability`
-- Provides proper namespacing for engine models
+**Use when:** Creating controllers in your host app that need CCCUX authorization.
 
-### 2. Host App Controllers with CCCUX Authorization
+### 3. `Cccux::CccuxController`
+**Full CCCUX admin interface controller:**
+- Inherits all functionality from `ApplicationController`
+- Dedicated admin layout (`layout 'cccux/admin'`)
+- Enhanced error handling for admin interface
+- Namespaced model handling (`resource_class` override)
+- Role Manager access control (`ensure_role_manager`)
 
-For controllers in your host application that need CCCUX authorization:
+**Use when:** Creating controllers within the CCCUX admin interface.
 
-```ruby
-class YourController < ApplicationController
-  # Your controller logic here
-  # Authorization is automatically available from ApplicationController
-end
-```
+## Controller Requirements
 
-**Features:**
-- Uses your application's default layout
-- Includes CanCanCan authorization (inherited from ApplicationController)
-- Overrides `current_ability` to use `Cccux::Ability` (inherited from ApplicationController)
-- Handles authorization errors with redirects (inherited from ApplicationController)
-- Makes `current_ability` available to models for the `owned` scope (inherited from ApplicationController)
+### Required Setup
 
-### 3. Manual CCCUX Integration
+All controllers using CCCUX authorization must:
 
-For controllers that need custom authorization logic:
+1. **Override `current_ability`** (handled automatically by base controllers)
+2. **Set up proper error handling** (handled automatically by base controllers)
+3. **Include user authentication** (handled by Devise integration)
+
+### Host App Controllers
+
+For controllers in your main application:
 
 ```ruby
-class YourController < ApplicationController
-  # Include CanCanCan
-  include CanCan::ControllerAdditions
-  
-  # Override current_ability to use CCCUX
-  def current_ability
-    @current_ability ||= Cccux::Ability.new(current_user)
-  end
-  
-  # Handle authorization errors
-  rescue_from CanCan::AccessDenied do |exception|
-    redirect_to root_path, alert: 'Access denied.'
-  end
-end
-```
-
-## Required Controller Setup
-
-### 1. ApplicationController Setup
-
-Your main `ApplicationController` should include CCCUX authorization:
-
-```ruby
-class ApplicationController < ActionController::Base
-  # Include CanCanCan authorization
-  include CanCan::ControllerAdditions
-  
-  # Include CCCUX authorization helpers
-  helper Cccux::AuthorizationHelper
-  
-  # Make current_ability available to models for the owned scope
-  before_action :set_current_ability_for_models
-  
-  # Handle CanCan authorization errors gracefully
-  rescue_from CanCan::AccessDenied do |exception|
-    redirect_to root_path, alert: 'Access denied.'
-  end
-  
-  protected
-  
-  # Override current_ability to use CCCUX Ability class
-  def current_ability
-    @current_ability ||= Cccux::Ability.new(current_user)
-  end
-  
-  # Make current_ability available to models for the owned scope
-  def set_current_ability_for_models
-    Thread.current[:current_ability] = current_ability
-  end
-end
-```
-
-This provides:
-- CanCanCan authorization
-- CCCUX authorization helpers
-- Error handling for authorization failures
-- `current_ability` override to use `Cccux::Ability`
-- `current_ability` availability to models for the `owned` scope
-
-### 2. Resource Controllers
-
-For controllers that manage resources with CCCUX authorization:
-
-```ruby
-class OrdersController < ApplicationController
-  # Automatically loads and authorizes resources
-  load_and_authorize_resource
+class UsersController < Cccux::AuthorizationController
+  # Automatically gets:
+  # - CanCanCan integration
+  # - Error handling
+  # - Resource loading and authorization
+  # - Host app layout
   
   def index
-    # Use the owned scope for clean, consistent authorization
-    @orders = Order.owned.order(:created_at)
+    @users = User.owned.includes(:cccux_roles)
   end
   
   def show
-    # @order is automatically loaded and authorized
+    # @user is automatically loaded and authorized
   end
   
   def create
-    # Authorization is automatically checked before action
-    @order = Order.new(order_params)
-    @order.user = current_user
-    
-    if @order.save
-      redirect_to @order, notice: 'Order created successfully.'
+    if @user.save
+      redirect_to @user, notice: 'User created successfully.'
     else
-      render :new, status: :unprocessable_entity
+      render :new
+    end
+  end
+end
+```
+
+### CCCUX Admin Controllers
+
+For controllers within the CCCUX admin interface:
+
+```ruby
+module Cccux
+  class RolesController < CccuxController
+    # Automatically gets:
+    # - All base functionality
+    # - Admin layout
+    # - Enhanced error handling
+    # - Namespaced model handling
+    # - Role Manager access control
+    
+    before_action :ensure_role_manager
+    
+    def index
+      # @roles is automatically loaded and authorized
+      # Uses Cccux::Role model automatically
     end
   end
 end
@@ -145,350 +100,323 @@ end
 
 ## Authorization Patterns
 
-### 1. Using the `owned` Scope (Recommended)
+### Primary Pattern: `Model.owned`
 
-The `owned` scope is the primary and recommended way to handle authorization in CCCUX:
+Use the `owned` scope for automatic ownership filtering:
 
 ```ruby
-class ProductsController < ApplicationController
-  load_and_authorize_resource
-  
+class UsersController < Cccux::AuthorizationController
   def index
-    # Clean, simple, and consistent
-    @products = Product.owned.order(:name)
+    @users = User.owned.includes(:cccux_roles)
   end
   
   def show
-    # @product is automatically loaded and authorized
+    # @user is automatically loaded and authorized
   end
 end
 ```
 
-**Benefits of the `owned` scope:**
-- **Shorter syntax**: `Product.owned` vs `Product.accessible_by(current_ability)`
-- **Consistent across all models**: Same pattern for User, Store, Order, etc.
-- **Automatic ownership detection**: CCCUX automatically applies the correct ownership logic
-- **Performance optimized**: Includes proper eager loading and joins
+### Legacy Pattern: `accessible_by(current_ability)`
 
-### 2. Automatic Resource Authorization
-
-The `load_and_authorize_resource` directive automatically:
-
-- Loads the resource for `show`, `edit`, `update`, `destroy` actions
-- Authorizes the action before it executes
-- Scopes collections based on user permissions
-- Handles authorization failures
+For complex queries that can't use the `owned` scope:
 
 ```ruby
-class ProductsController < ApplicationController
-  load_and_authorize_resource
-  
+class UsersController < Cccux::AuthorizationController
   def index
-    # @products is automatically scoped using the owned scope:
-    # - All products if user has "All Records" permission
-    # - User's products if user has "Owned Records Only" permission
-    @products = Product.owned.order(:name)
+    @users = User.accessible_by(current_ability).includes(:cccux_roles)
   end
 end
 ```
 
-### 3. Manual Authorization with accessible_by (Legacy)
+### Custom Authorization
 
-For custom queries or when you need more control (use sparingly):
+For custom authorization logic:
 
 ```ruby
-class OrdersController < ApplicationController
-  load_and_authorize_resource
-  
+class OrdersController < Cccux::AuthorizationController
   def index
     if params[:store_id]
       store = Store.find(params[:store_id])
-      @orders = store.orders.owned  # Use owned scope instead
+      authorize! :read, store
+      @orders = store.orders.owned
     else
-      @orders = Order.owned  # Use owned scope instead
+      @orders = Order.owned
     end
-  end
-end
-```
-
-### 4. Custom Authorization Checks
-
-For complex authorization logic:
-
-```ruby
-class ProjectsController < ApplicationController
-  load_and_authorize_resource
-  
-  def show
-    # Additional custom authorization
-    unless @project.visible_to?(current_user)
-      raise CanCan::AccessDenied.new("Project is not visible to you")
-    end
-  end
-  
-  def update
-    # Custom authorization for specific conditions
-    if @project.locked? && !current_user.can_edit_locked_projects?
-      raise CanCan::AccessDenied.new("Cannot edit locked projects")
-    end
-    
-    if @project.update(project_params)
-      redirect_to @project, notice: 'Project updated successfully.'
-    else
-      render :edit, status: :unprocessable_entity
-    end
-  end
-end
-```
-
-## Ownership and Scoping
-
-### 1. Automatic Ownership Detection
-
-CCCUX automatically detects ownership patterns in your models:
-
-```ruby
-class Order < ApplicationRecord
-  include Cccux::Authorizable  # Include the concern for the owned scope
-  
-  belongs_to :user  # Standard user_id ownership
-  
-  # CCCUX automatically applies user_id scoping for "Owned Records Only" permissions
-  # The owned scope will automatically use the correct ownership logic
-end
-
-class Article < ApplicationRecord
-  include Cccux::Authorizable
-  
-  belongs_to :creator, class_name: 'User'  # Creator ownership
-  
-  # CCCUX automatically applies creator_id scoping
-end
-
-class Project < ApplicationRecord
-  include Cccux::Authorizable
-  
-  has_many :project_members
-  has_many :members, through: :project_members, source: :user
-  
-  # Custom ownership method
-  def owned_by?(user)
-    members.include?(user) || creator == user
-  end
-  
-  # Class method for scoping collections
-  def self.scoped_for_user(user)
-    joins(:project_members).where(project_members: { user: user })
-      .or(where(creator: user))
-  end
-end
-```
-
-### 2. Custom Ownership Methods
-
-For complex ownership patterns, implement these methods in your models:
-
-```ruby
-class Store < ApplicationRecord
-  include Cccux::Authorizable
-  
-  has_many :store_managers
-  has_many :managers, through: :store_managers, source: :user
-  
-  # Instance method for individual record authorization
-  def owned_by?(user)
-    managers.include?(user) || user_id == user.id
-  end
-  
-  # Class method for collection scoping (used in index actions)
-  def self.scoped_for_user(user)
-    joins(:store_managers).where(store_managers: { user: user })
-      .or(where(user: user))
   end
 end
 ```
 
 ## Error Handling
 
-### 1. Authorization Errors
+CCCUX controllers automatically handle common errors:
 
-CCCUX provides automatic error handling for authorization failures:
+### Authorization Errors
+- `CanCan::AccessDenied` → Redirects to root with "Access denied" message
+- Admin controllers show "Only Role Managers can access the admin interface"
+
+### Not Found Errors
+- `ActiveRecord::RecordNotFound` → Redirects to root with "Resource not found" message
+
+### Admin-Specific Errors
+- `ActionController::RoutingError` → Redirects to root with "Page not found" message
+- `ActionController::ParameterMissing` → Redirects to root with "Invalid parameters" message
+
+## Model Integration
+
+### Required Model Methods
+
+Models must implement these methods for ownership scoping:
 
 ```ruby
-# In ApplicationController or CCCUX base controllers
-rescue_from CanCan::AccessDenied do |exception|
-  redirect_to root_path, alert: 'Access denied.'
+class Store < ApplicationRecord
+  include Cccux::Authorizable
+  
+  # Check if record is owned by user
+  def owned_by?(user)
+    user_id == user.id
+  end
+  
+  # Scope records for user (owned + any global access)
+  def self.scoped_for_user(user)
+    where(user_id: user.id)
+  end
 end
 ```
 
-### 2. AJAX Authorization Errors
+### Optional: Include Authorizable Concern
 
-For AJAX requests, handle authorization errors appropriately:
+For automatic `owned` scope support:
 
 ```ruby
-class OrdersController < Cccux::AuthorizationController
-  load_and_authorize_resource
+class Store < ApplicationRecord
+  include Cccux::Authorizable
+  # Automatically provides Store.owned scope
+end
+```
+
+## Layout Integration
+
+### Host App Layout
+
+Controllers inheriting from `AuthorizationController` use your application's layout:
+
+```ruby
+class UsersController < Cccux::AuthorizationController
+  # Uses layout 'application' (your main app layout)
+end
+```
+
+### Admin Layout
+
+Controllers inheriting from `CccuxController` use the CCCUX admin layout:
+
+```ruby
+module Cccux
+  class RolesController < CccuxController
+    # Uses layout 'cccux/admin' (dedicated admin layout)
+  end
+end
+```
+
+## Namespaced Models
+
+CCCUX admin controllers automatically handle namespaced models:
+
+```ruby
+module Cccux
+  class RolesController < CccuxController
+    # Automatically uses Cccux::Role model
+    # No need to specify resource_class
+  end
+end
+```
+
+## Access Control
+
+### Role Manager Access
+
+Admin controllers can enforce Role Manager access:
+
+```ruby
+module Cccux
+  class RolesController < CccuxController
+    before_action :ensure_role_manager
+    
+    # Only Role Managers can access these actions
+  end
+end
+```
+
+### Custom Access Control
+
+For custom access control:
+
+```ruby
+class UsersController < Cccux::AuthorizationController
+  before_action :ensure_admin, only: [:destroy]
   
-  def update
-    respond_to do |format|
-      if @order.update(order_params)
-        format.html { redirect_to @order, notice: 'Order updated.' }
-        format.json { render json: @order }
-      else
-        format.html { render :edit, status: :unprocessable_entity }
-        format.json { render json: @order.errors, status: :unprocessable_entity }
-      end
-    end
-  rescue CanCan::AccessDenied
-    respond_to do |format|
-      format.html { redirect_to root_path, alert: 'Access denied.' }
-      format.json { render json: { error: 'Access denied' }, status: :forbidden }
+  private
+  
+  def ensure_admin
+    unless current_user.has_role?('Administrator')
+      redirect_to root_path, alert: 'Administrator access required.'
     end
   end
 end
 ```
 
-## Best Practices
+## Performance Optimization
 
-### 1. Controller Organization
+### Eager Loading
 
-- Use `Cccux::AuthorizationController` for most resource controllers
-- Use `CccuxController` only for CCCUX admin functionality
-- Inherit from `ApplicationController` only when you need custom authorization logic
-
-### 2. Resource Loading
-
-- **Use the `owned` scope as your primary authorization pattern**
-- Use `load_and_authorize_resource` for standard CRUD operations
-- Use `accessible_by(current_ability)` only for complex custom queries
-- Avoid manual authorization checks when possible
-
-### 3. Model Design
-
-- Include `Cccux::Authorizable` in your models to get the `owned` scope
-- Implement `owned_by?(user)` for custom ownership logic
-- Implement `scoped_for_user(user)` for collection scoping
-- Use standard `user_id` or `creator_id` fields when possible
-
-### 4. Error Handling
-
-- Always handle `CanCan::AccessDenied` exceptions
-- Provide appropriate responses for both HTML and JSON requests
-- Use consistent error messages across your application
-
-## Examples
-
-### Complete Controller Example
+Always include related models to avoid N+1 queries:
 
 ```ruby
-class ProductsController < Cccux::AuthorizationController
-  load_and_authorize_resource
-  before_action :set_category, only: [:index, :new, :create]
-  
+class UsersController < Cccux::AuthorizationController
   def index
-    @products = if @category
-      @category.products.owned  # Use owned scope
-    else
-      Product.owned  # Use owned scope
+    @users = User.owned.includes(:cccux_roles)
+  end
+end
+```
+
+### Batch Operations
+
+For batch operations, use `accessible_by`:
+
+```ruby
+class UsersController < Cccux::AuthorizationController
+  def bulk_update
+    users = User.accessible_by(current_ability).where(id: params[:user_ids])
+    users.update_all(active: params[:active])
+    redirect_to users_path, notice: 'Users updated successfully.'
+  end
+end
+```
+
+## Testing
+
+### Controller Tests
+
+Test authorization in your controller tests:
+
+```ruby
+require 'rails_helper'
+
+RSpec.describe UsersController, type: :controller do
+  let(:user) { create(:user) }
+  let(:admin) { create(:user, :admin) }
+  
+  before { sign_in user }
+  
+  describe 'GET #index' do
+    it 'shows only owned users' do
+      get :index
+      expect(assigns(:users)).to contain_exactly(user)
     end
+  end
+  
+  describe 'GET #show' do
+    it 'allows access to own user' do
+      get :show, params: { id: user.id }
+      expect(response).to be_successful
+    end
+    
+    it 'denies access to other users' do
+      other_user = create(:user)
+      expect {
+        get :show, params: { id: other_user.id }
+      }.to raise_error(CanCan::AccessDenied)
+    end
+  end
+end
+```
+
+## Common Patterns
+
+### CRUD Controllers
+
+Standard CRUD pattern with CCCUX:
+
+```ruby
+class StoresController < Cccux::AuthorizationController
+  def index
+    @stores = Store.owned.order(:name)
   end
   
   def show
-    # @product is automatically loaded and authorized
+    # @store is automatically loaded and authorized
   end
   
   def new
-    @product = @category ? @category.products.build : Product.new
+    # @store is automatically built
   end
   
   def create
-    @product = @category ? @category.products.build(product_params) : Product.new(product_params)
-    @product.creator = current_user
-    
-    if @product.save
-      redirect_to @product, notice: 'Product created successfully.'
+    if @store.save
+      redirect_to @store, notice: 'Store created successfully.'
     else
-      render :new, status: :unprocessable_entity
+      render :new
     end
   end
   
+  def edit
+    # @store is automatically loaded and authorized
+  end
+  
   def update
-    if @product.update(product_params)
-      redirect_to @product, notice: 'Product updated successfully.'
+    if @store.update(store_params)
+      redirect_to @store, notice: 'Store updated successfully.'
     else
-      render :edit, status: :unprocessable_entity
+      render :edit
     end
   end
   
   def destroy
-    @product.destroy
-    redirect_to products_path, notice: 'Product deleted successfully.'
+    @store.destroy
+    redirect_to stores_path, notice: 'Store deleted successfully.'
   end
   
   private
   
-  def set_category
-    @category = Category.find(params[:category_id]) if params[:category_id]
-  end
-  
-  def product_params
-    params.require(:product).permit(:name, :description, :price, :category_id)
+  def store_params
+    params.require(:store).permit(:name, :address)
   end
 end
 ```
 
-### Model with Custom Ownership
+### Nested Resources
+
+For nested resources:
 
 ```ruby
-class Project < ApplicationRecord
-  include Cccux::Authorizable  # Include for owned scope
+class OrdersController < Cccux::AuthorizationController
+  before_action :set_store
   
-  belongs_to :creator, class_name: 'User'
-  has_many :project_members
-  has_many :members, through: :project_members, source: :user
-  
-  def owned_by?(user)
-    members.include?(user) || creator == user
+  def index
+    @orders = @store.orders.owned.order(:created_at)
   end
   
-  def self.scoped_for_user(user)
-    joins(:project_members).where(project_members: { user: user })
-      .or(where(creator: user))
+  def create
+    @order = @store.orders.build(order_params)
+    @order.user = current_user
+    
+    if @order.save
+      redirect_to store_order_path(@store, @order), notice: 'Order created successfully.'
+    else
+      render :new
+    end
+  end
+  
+  private
+  
+  def set_store
+    @store = Store.owned.find(params[:store_id])
+  end
+  
+  def order_params
+    params.require(:order).permit(:amount, :description)
   end
 end
 ```
 
-### Consistent Controller Pattern
-
-All your controllers should follow this consistent pattern:
-
-```ruby
-# Users Controller
-class UsersController < ApplicationController
-  load_and_authorize_resource
-  
-  def index
-    @users = User.includes(:cccux_roles).owned.order(:email)
-  end
-end
-
-# Stores Controller  
-class StoresController < ApplicationController
-  load_and_authorize_resource
-  
-  def index
-    @stores = Store.owned.order(:name)
-  end
-end
-
-# Orders Controller
-class OrdersController < ApplicationController
-  load_and_authorize_resource
-  
-  def index
-    @orders = Order.owned.order(:created_at)
-  end
-end
-```
-
-This guide covers all the essential patterns for using CCCUX in your controllers. The `owned` scope provides a clean, consistent, and performant way to handle authorization across your entire application. 
+This guide covers the essential patterns for using CCCUX controllers effectively in your Rails application. 

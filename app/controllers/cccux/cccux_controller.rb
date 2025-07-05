@@ -2,17 +2,9 @@ module Cccux
   class CccuxController < ApplicationController
     layout 'cccux/admin'
     
-    # CanCanCan authorization
-    include CanCan::ControllerAdditions
-    
-    # Handle CanCan authorization errors gracefully
+    # Override the default error message for admin interface
     rescue_from CanCan::AccessDenied do |exception|
       redirect_to main_app.root_path, alert: 'Access denied. Only Role Managers can access the admin interface.'
-    end
-    
-    # Handle 404 errors in CCCUX admin area - redirect home instead of showing error pages
-    rescue_from ActiveRecord::RecordNotFound do |exception|
-      redirect_to main_app.root_path, alert: 'The requested resource was not found.'
     end
     
     rescue_from ActionController::RoutingError do |exception|
@@ -29,14 +21,7 @@ module Cccux
     # so every user has permissions to check against
     load_and_authorize_resource
     
-    before_action :set_current_user
-    
     protected
-    
-    # Override current_ability to use CCCUX Ability class
-    def current_ability
-      @current_ability ||= Cccux::Ability.new(current_user)
-    end
     
     # Override resource_class to handle namespaced models
     def resource_class
@@ -52,10 +37,6 @@ module Cccux
     rescue NameError
       # Fallback to default behavior if constantization fails
       super
-    end
-    
-    def set_current_user
-      @current_user = current_user if defined?(current_user)
     end
     
     private
