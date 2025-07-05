@@ -112,18 +112,11 @@ module Cccux
     def apply_scoped_owned_ability(action, model_class, user)
       # For scoped owned context, combine scoping with ownership
       can action, model_class do |record|
-        # First check ownership
-        unless record_owned_by_user?(record, user)
-          return false
-        end
-        
-        # Then check scoped context
-        if model_class.respond_to?(:in_current_scope?)
-          model_class.in_current_scope?(record, user, @context)
-        else
-          Rails.logger.warn "CCCUX: #{model_class.name} doesn't implement in_current_scope? method for scoped permissions"
-          false
-        end
+        # First check ownership, then check scoped context
+        record_owned_by_user?(record, user) && 
+          (model_class.respond_to?(:in_current_scope?) ? 
+            model_class.in_current_scope?(record, user, @context) : 
+            (Rails.logger.warn("CCCUX: #{model_class.name} doesn't implement in_current_scope? method for scoped permissions") || false))
       end
     end
     
