@@ -279,7 +279,7 @@ namespace :cccux do
     # Create Role Manager role (highest priority)
     role_manager = Cccux::Role.find_or_create_by(name: 'Role Manager') do |role|
       role.description = 'Can manage roles and permissions for all users'
-      role.priority = 1
+      role.priority = 100
       role.active = true
     end
     

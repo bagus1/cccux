@@ -130,22 +130,27 @@ module Cccux
       permission_ids = params[:role][:ability_permission_ids] || []
       permission_access_type = params[:role][:permission_access_type] || {}
       
-      # Clear existing role abilities
-      @role.role_abilities.destroy_all
-      
       # Get selected permissions
       selected_permissions = Cccux::AbilityPermission.where(id: permission_ids)
       
-      # Create role abilities with access type settings
+      # Remove permissions that are no longer selected
+      @role.role_abilities.where.not(ability_permission: selected_permissions).destroy_all
+      
+      # Update or create role abilities with access type settings
       selected_permissions.each do |permission|
         # Determine access type for this specific permission
         # Default to 'global' for backward compatibility
         access_type = permission_access_type[permission.id.to_s] || 'global'
         
-        @role.role_abilities.create!(
-          ability_permission: permission,
-          access_type: access_type
-        )
+        # Convert access_type to owned/context attributes
+        is_owned = (access_type == 'contextual')
+        context_value = is_owned ? 'owned' : 'global'
+        
+        # Find existing role ability or create new one
+        role_ability = @role.role_abilities.find_or_initialize_by(ability_permission: permission)
+        role_ability.owned = is_owned
+        role_ability.context = context_value
+        role_ability.save!
       end
     end
     

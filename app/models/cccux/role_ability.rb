@@ -28,7 +28,7 @@ module Cccux
       case context
       when 'global'
         'global'
-      when 'scoped'
+      when 'owned', 'scoped'
         'contextual'
       else
         'global' # fallback
