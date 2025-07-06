@@ -66,6 +66,7 @@
         <div style="font-size: 0.85rem; color: #004085; line-height: 1.4;">
           <div style="margin-bottom: 0.25rem;"><strong>Global:</strong> Access all records everywhere</div>
           <div style="margin-bottom: 0.25rem;"><strong>Contextual:</strong> Access records within current route context (e.g., store-scoped resources)</div>
+          <div style="margin-bottom: 0.25rem;"><strong>Owned:</strong> Access only to records owned by the current user</div>
         </div>
       </div>
       
@@ -123,9 +124,72 @@
                           class: "access-radio",
                           disabled: !is_assigned %>
                       <%= label_tag "access_contextual_#{permission.id}", "Contextual", 
+                          style: "font-size: 0.8rem; cursor: pointer; margin-right: 0.75rem;",
+                          class: "access-label #{is_assigned ? '' : 'text-muted'}" %>
+                      
+                      <%= radio_button_tag "role[permission_access_type][#{permission.id}]", "owned", 
+                          current_access_type == 'owned', 
+                          id: "access_owned_#{permission.id}",
+                          style: "margin-right: 0.25rem;",
+                          class: "access-radio",
+                          disabled: !is_assigned %>
+                      <%= label_tag "access_owned_#{permission.id}", "Owned", 
                           style: "font-size: 0.8rem; cursor: pointer;",
                           class: "access-label #{is_assigned ? '' : 'text-muted'}" %>
                     </div>
+                  </div>
+                </div>
+                
+                <!-- Ownership Configuration (shown when "Owned" is selected) -->
+                <div class="ownership-config" 
+                     style="display: none; margin-top: 0.5rem; padding: 0.75rem; background-color: #fff3cd; border: 1px solid #ffeaa7; border-radius: 4px;"
+                     data-permission-id="<%= permission.id %>">
+                  <div style="font-size: 0.8rem; color: #856404; font-weight: bold; margin-bottom: 0.5rem;">
+                    Ownership Configuration:
+                  </div>
+                  
+                  <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; margin-bottom: 0.5rem;">
+                    <div>
+                      <label style="font-size: 0.75rem; color: #856404; display: block; margin-bottom: 0.25rem;">
+                        Ownership Model:
+                      </label>
+                      <%= select_tag "role[ownership_source][#{permission.id}]", 
+                          options_for_select([['Select model...', '']] + (@available_ownership_models || []).map { |m| [m, m] }, role_ability&.ownership_source),
+                          class: "ownership-source-field",
+                          data: { permission_id: permission.id },
+                          style: "width: 100%; padding: 0.25rem; font-size: 0.75rem; border: 1px solid #ffeaa7; border-radius: 2px;" %>
+                      <small style="font-size: 0.7rem; color: #856404;">
+                        Model that defines ownership (optional)
+                      </small>
+                    </div>
+                    
+                    <div>
+                      <label style="font-size: 0.75rem; color: #856404; display: block; margin-bottom: 0.25rem;">
+                        Foreign Key:
+                      </label>
+                      <%= text_field_tag "role[ownership_foreign_key][#{permission.id}]", 
+                          (role_ability&.ownership_conditions.present? ? JSON.parse(role_ability.ownership_conditions)["foreign_key"] : nil),
+                          placeholder: "e.g., store_id",
+                          style: "width: 100%; padding: 0.25rem; font-size: 0.75rem; border: 1px solid #ffeaa7; border-radius: 2px;",
+                          class: "ownership-foreign-key-field" %>
+                      <small style="font-size: 0.7rem; color: #856404;">
+                        Links to main model (auto-detected if blank)
+                      </small>
+                    </div>
+                  </div>
+                  
+                  <div>
+                    <label style="font-size: 0.75rem; color: #856404; display: block; margin-bottom: 0.25rem;">
+                      User Key:
+                    </label>
+                    <%= text_field_tag "role[ownership_user_key][#{permission.id}]", 
+                        (role_ability&.ownership_conditions.present? ? JSON.parse(role_ability.ownership_conditions)["user_key"] : nil),
+                        placeholder: "e.g., user_id",
+                        style: "width: 100%; padding: 0.25rem; font-size: 0.75rem; border: 1px solid #ffeaa7; border-radius: 2px;",
+                        class: "ownership-user-key-field" %>
+                    <small style="font-size: 0.7rem; color: #856404;">
+                      Identifies the user (defaults to user_id)
+                    </small>
                   </div>
                 </div>
               <% end %>
@@ -143,62 +207,101 @@
 
   <!-- Enhanced JavaScript for permission interactions -->
   <script>
-    document.addEventListener('DOMContentLoaded', function() {
-      // Handle permission checkbox changes
-      document.querySelectorAll('.permission-checkbox').forEach(function(checkbox) {
-        checkbox.addEventListener('change', function() {
-          updatePermissionControls(this.dataset.permissionId);
-        });
-      });
-
-      // Handle access radio button changes
-      document.querySelectorAll('.access-radio').forEach(function(radio) {
-        radio.addEventListener('change', function() {
-          // Future: Add any access type specific logic here
-        });
-      });
-
-      // Initialize all permission controls on page load
-      document.querySelectorAll('.permission-checkbox').forEach(function(checkbox) {
-        updatePermissionControls(checkbox.dataset.permissionId);
-      });
-
-      function updatePermissionControls(permissionId) {
-        const checkbox = document.querySelector(`input[data-permission-id="${permissionId}"]`);
-        const permissionRow = document.querySelector(`div[data-permission-id="${permissionId}"]`);
-        const accessControls = permissionRow.querySelectorAll('.access-radio');
-        const accessLabels = permissionRow.querySelectorAll('.access-label');
+    document.addEventListener('DOMContentLoaded', initializeRoleForm);
+    document.addEventListener('turbo:load', initializeRoleForm);
+    
+    function initializeRoleForm() {
+      // Handle permission checkboxes and access type radios
+      const permissionCheckboxes = document.querySelectorAll('.permission-checkbox');
+      
+      permissionCheckboxes.forEach(checkbox => {
+        const permissionId = checkbox.value;
+        const accessTypeRadios = document.querySelectorAll(`input[name="role[permission_access_type][${permissionId}]"]`);
+        const accessLabels = document.querySelectorAll(`label[for^="access_"][for$="_${permissionId}"]`);
+        const ownershipConfig = document.querySelector(`.ownership-config[data-permission-id="${permissionId}"]`);
         
-        if (checkbox.checked) {
-          // Enable access controls
-          accessControls.forEach(control => {
-            control.disabled = false;
+        function updateAccessTypeVisibility() {
+          const isChecked = checkbox.checked;
+          
+          // Enable/disable access type radios
+          accessTypeRadios.forEach(radio => {
+            radio.disabled = !isChecked;
           });
+          
+          // Update label opacity
           accessLabels.forEach(label => {
-            label.classList.remove('text-muted');
-            label.style.opacity = '1';
+            label.style.opacity = isChecked ? '1' : '0.5';
+            if (isChecked) {
+              label.classList.remove('text-muted');
+            } else {
+              label.classList.add('text-muted');
+            }
           });
-        } else {
-          // Disable all controls
-          accessControls.forEach(control => {
-            control.disabled = true;
-          });
-          accessLabels.forEach(label => {
-            label.classList.add('text-muted');
-            label.style.opacity = '0.5';
-          });
+          
+          // Hide ownership config when permission is unchecked
+          if (ownershipConfig) {
+            if (!isChecked) {
+              ownershipConfig.style.display = 'none';
+            } else {
+              // Check if "Owned" is selected
+              const ownedRadio = document.querySelector(`#access_owned_${permissionId}`);
+              if (ownedRadio && ownedRadio.checked) {
+                ownershipConfig.style.display = 'block';
+              }
+            }
+          }
         }
-      }
-
+        
+        checkbox.addEventListener('change', updateAccessTypeVisibility);
+        updateAccessTypeVisibility();
+      });
+      
+      // Handle access type radio changes to show/hide ownership config
+      const accessRadios = document.querySelectorAll('.access-radio');
+      
+      accessRadios.forEach(radio => {
+        radio.addEventListener('change', function() {
+          // Extract permission ID from the radio button name or ID
+          const permissionId = this.name.match(/\[(\d+)\]$/)?.[1] || this.id.match(/_(\d+)$/)?.[1];
+          const ownershipConfig = document.querySelector(`.ownership-config[data-permission-id="${permissionId}"]`);
+          const checkbox = document.querySelector(`input[value="${permissionId}"].permission-checkbox`);
+          
+          if (ownershipConfig && checkbox && checkbox.checked) {
+            if (this.value === 'owned') {
+              ownershipConfig.style.display = 'block';
+            } else {
+              ownershipConfig.style.display = 'none';
+            }
+          }
+        });
+      });
+      
+      // Handle ownership source model dropdown
+      const ownershipSourceSelects = document.querySelectorAll('.ownership-source-field');
+      
+      ownershipSourceSelects.forEach(select => {
+        select.addEventListener('change', function() {
+          const permissionId = this.dataset.permissionId;
+          const selectedModel = this.value;
+          
+          if (selectedModel) {
+            console.log(`Model selected for permission ${permissionId}: ${selectedModel}`);
+          }
+        });
+      });
+      
       // Add CSS for muted text
-      const style = document.createElement('style');
-      style.textContent = `
-        .text-muted {
-          color: #6c757d !important;
-        }
-      `;
-      document.head.appendChild(style);
-    });
+      if (!document.getElementById('cccux-muted-style')) {
+        const style = document.createElement('style');
+        style.id = 'cccux-muted-style';
+        style.textContent = `
+          .text-muted {
+            color: #6c757d !important;
+          }
+        `;
+        document.head.appendChild(style);
+      }
+    }
   </script>
 
   <!-- Form Actions -->

@@ -23,12 +23,13 @@ module Cccux
     scope :global_access, -> { where(context: 'global') }
     scope :contextual_access, -> { where(context: 'scoped') }
     
-    # New: access_type returns 'global' or 'contextual' for new system
+    # Access types: global, contextual, owned
     def access_type
-      case context
-      when 'global'
+      if owned
+        'owned'
+      elsif context == 'global'
         'global'
-      when 'owned', 'scoped'
+      elsif context == 'scoped'
         'contextual'
       else
         'global' # fallback

@@ -63,12 +63,12 @@ module Cccux
       # For User resource, keep owned logic for now
       if permission.subject == 'User'
         if role_ability.context == 'owned' || (role_ability.owned && user&.persisted?)
-          apply_owned_ability(action, model_class, user)
+          apply_owned_ability(action, model_class, user, role_ability)
         else
           can action, model_class
         end
       else
-        # For all other resources, use only global/contextual
+        # For all other resources, use global/contextual/owned
         case role_ability.access_type
         when 'global'
           can action, model_class
@@ -81,21 +81,37 @@ module Cccux
               false
             end
           end
+        when 'owned'
+          apply_owned_ability(action, model_class, user, role_ability)
         else
           can action, model_class
         end
       end
     end
     
-    def apply_owned_ability(action, model_class, user)
-      # Try to detect ownership pattern automatically
-      if model_class.respond_to?(:owned_by?)
-        # Model has custom ownership method - always use block-based rule
+    def apply_owned_ability(action, model_class, user, role_ability = nil)
+      # 1. Dynamic ownership configuration
+      if role_ability && role_ability.ownership_source.present?
+        ownership_model = role_ability.ownership_source.constantize rescue nil
+        if ownership_model && user&.persisted?
+          # Parse conditions (should be a JSON string or nil)
+          conditions = role_ability.ownership_conditions.present? ? JSON.parse(role_ability.ownership_conditions) : {}
+          foreign_key = conditions["foreign_key"] || (model_class.name.foreign_key)
+          user_key = conditions["user_key"] || "user_id"
+          # Find all records owned by user via the join model
+          owned_ids = ownership_model.where(user_key => user.id).pluck(foreign_key)
+          can action, model_class, id: owned_ids if owned_ids.any?
+        else
+          Rails.logger.warn "CCCUX: Invalid ownership_source #{role_ability.ownership_source} for #{model_class.name}"
+          can action, model_class, id: []
+        end
+      # 2. Model custom owned_by?
+      elsif model_class.respond_to?(:owned_by?)
         can action, model_class do |record|
           record.owned_by?(user)
         end
+      # 3. Model custom scoped_for_user
       elsif model_class.respond_to?(:scoped_for_user)
-        # Model provides scoping method - use ID-based rule
         scoped_records = model_class.scoped_for_user(user)
         if scoped_records.is_a?(ActiveRecord::Relation)
           ids = scoped_records.pluck(:id)
@@ -103,14 +119,13 @@ module Cccux
         else
           can action, model_class, scoped_records
         end
+      # 4. Standard user_id
       elsif model_class.column_names.include?('user_id')
-        # Standard user_id ownership pattern
         can action, model_class, user_id: user.id
+      # 5. Standard creator_id
       elsif model_class.column_names.include?('creator_id')
-        # Creator ownership pattern
         can action, model_class, creator_id: user.id
       else
-        # Fallback: no ownership pattern found - grant access to all records
         Rails.logger.warn "CCCUX: No ownership pattern found for #{model_class.name}, granting access to all records"
         can action, model_class
       end

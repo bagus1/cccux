@@ -30,6 +30,7 @@ Cccux::Engine.routes.draw do
       collection do
         get :search
         patch :reorder
+        get :model_columns
       end
     end
     

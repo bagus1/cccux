@@ -17,6 +17,7 @@
     <table style="width: 100%; border-collapse: collapse;">
       <thead style="background-color: #f8f9fa;">
         <tr>
+          <th style="padding: 1rem; text-align: left; border-bottom: 1px solid #dee2e6; font-weight: bold; color: #495057;">ID</th>
           <th style="padding: 1rem; text-align: left; border-bottom: 1px solid #dee2e6; font-weight: bold; color: #495057;">Email</th>
           <th style="padding: 1rem; text-align: left; border-bottom: 1px solid #dee2e6; font-weight: bold; color: #495057;">Roles</th>
           <th style="padding: 1rem; text-align: left; border-bottom: 1px solid #dee2e6; font-weight: bold; color: #495057;">Created</th>
@@ -26,6 +27,9 @@
       <tbody>
         <% @users.each do |user| %>
           <tr style="border-bottom: 1px solid #f8f9fa;">
+            <td style="padding: 1rem; color: #6c757d; font-size: 0.9rem; font-family: monospace;">
+              #<%= user.id %>
+            </td>
             <td style="padding: 1rem; color: #495057;">
               <strong><%= user.email %></strong>
               <% if user.created_at > 24.hours.ago %>
