@@ -76,10 +76,20 @@ namespace :cccux do
     puts "📋 Step 7: Creating default admin user..."
     create_default_admin_user
     
-    # Step 8: Verify setup
-    puts "📋 Step 8: Verifying setup..."
-    verify_setup
+        # Step 8: Create footer partial
+    puts "📋 Step 8: Creating footer partial..."
+    create_footer_partial
+    puts "✅ Footer partial created"
     
+    # Step 9: Create home controller if needed
+    puts "📋 Step 9: Checking for home controller..."
+    create_home_controller
+    puts "✅ Home controller check completed"
+    
+    # Step 10: Verify setup
+    puts "📋 Step 10: Verifying setup..."
+    verify_setup
+
     puts ""
     puts "🎉 CCCUX + Devise setup completed successfully!"
     puts ""
@@ -420,6 +430,210 @@ namespace :cccux do
       end
     rescue => e
       puts "   ⚠️  Could not create default admin: #{e.message}"
+    end
+  end
+
+  def create_home_controller
+    # Check if home controller already exists
+    home_controller_path = Rails.root.join('app', 'controllers', 'home_controller.rb')
+    home_view_path = Rails.root.join('app', 'views', 'home', 'index.html.erb')
+    
+    home_controller_exists = File.exist?(home_controller_path)
+    if home_controller_exists
+      puts "   ℹ️  Home controller already exists"
+    else
+      # Create home controller
+      home_controller_content = <<~RUBY
+        class HomeController < ApplicationController
+          def index
+            # Welcome page for CCCUX powered Rails site
+          end
+        end
+      RUBY
+      File.write(home_controller_path, home_controller_content)
+      puts "   ✅ Created home controller at #{home_controller_path}"
+      # Create home views directory
+      home_views_dir = Rails.root.join('app', 'views', 'home')
+      FileUtils.mkdir_p(home_views_dir) unless Dir.exist?(home_views_dir)
+      # Create home index view
+      home_view_content = <<~ERB
+        <div class=\"welcome-section\" style=\"text-align: center; padding: 3rem 0;\">
+          <h1 style=\"color: #333; margin-bottom: 1rem; font-size: 2.5rem;\">
+            Welcome to your CCCUX powered Rails Site
+          </h1>
+          <p style=\"color: #666; font-size: 1.2rem; max-width: 600px; margin: 0 auto; line-height: 1.6;\">
+            Your Rails application is now equipped with CCCUX, a powerful role-based authorization engine built on CanCanCan. Edit app/views/home/index.html.erb to change this content
+          </p>
+          <div style=\"margin-top: 2rem;\">
+            <% if user_signed_in? %>
+              <p style=\"color: #28a745; font-weight: bold;\">
+                ✅ You are signed in as: <%= current_user.email %>
+              </p>
+              <% if current_user.has_role?('Role Manager') %>
+                <p style=\"color: #007bff; margin-top: 1rem;\">
+                  <a href=\"<%= cccux.root_path %>\" style=\"color: #007bff; text-decoration: none; font-weight: bold;\">
+                    🔧 Access CCCUX Admin Panel
+                  </a>
+                </p>
+              <% end %>
+            <% else %>
+              <p style=\"color: #6c757d;\">
+                <a href=\"<%= new_user_session_path %>\" style=\"color: #007bff; text-decoration: none;\">
+                  🔑 Sign in to get started
+                </a>
+              </p>
+            <% end %>
+          </div>
+        </div>
+      ERB
+      File.write(home_view_path, home_view_content)
+      puts "   ✅ Created home index view at #{home_view_path}"
+    end
+    # Always check and add root route if needed
+    routes_path = Rails.root.join('config', 'routes.rb')
+    routes_content = File.read(routes_path)
+    unless routes_content.include?("root 'home#index'")
+      if routes_content.include?('devise_for :users')
+        updated_content = routes_content.gsub(
+          /(devise_for :users)/,
+          "\\1\n  root 'home#index'"
+        )
+        File.write(routes_path, updated_content)
+        puts "   ✅ Added root route to routes.rb"
+      else
+        puts "   ⚠️  Could not find devise_for :users in routes - please manually add: root 'home#index'"
+      end
+    else
+      puts "   ℹ️  Root route already exists in routes.rb"
+    end
+  end
+
+  def create_footer_partial
+    # Create the shared directory if it doesn't exist
+    shared_dir = Rails.root.join('app', 'views', 'shared')
+    FileUtils.mkdir_p(shared_dir) unless Dir.exist?(shared_dir)
+    
+    footer_path = shared_dir.join('_footer.html.erb')
+    
+    # Create footer content
+    footer_content = <<~ERB
+      <!-- CCCUX Footer - Added by CCCUX setup -->
+      <footer class="cccux-footer" style="margin-top: 2rem; padding: 1rem 0; border-top: 1px solid #e5e5e5; background-color: #f8f9fa;">
+        <div class="container">
+          <div class="row">
+            <div class="col-md-6">
+              <nav class="footer-nav">
+                <a href="<%= main_app.root_path %>" class="footer-link">🏠 Home</a>
+                <% if user_signed_in? && current_user.has_role?('Role Manager') %>
+                  <span class="footer-separator">|</span>
+                  <a href="<%= cccux.root_path %>" class="footer-link">⚙️ CCCUX Admin</a>
+                <% end %>
+              </nav>
+            </div>
+            <div class="col-md-6 text-end">
+              <% if user_signed_in? %>
+                <span class="user-info">
+                  👤 <strong><%= current_user.email %></strong>
+                  <span class="footer-separator">|</span>
+                  <%= link_to "🚪 Logout", main_app.destroy_user_session_path, 
+                      method: :delete, 
+                      class: "footer-link",
+                      data: { turbo_method: :delete } %>
+                </span>
+              <% else %>
+                <span class="auth-links">
+                  <%= link_to "🔑 Sign In", main_app.new_user_session_path, class: "footer-link" %>
+                  <span class="footer-separator">|</span>
+                  <%= link_to "📝 Sign Up", main_app.new_user_registration_path, class: "footer-link" %>
+                </span>
+              <% end %>
+            </div>
+          </div>
+        </div>
+      </footer>
+
+      <style>
+        .cccux-footer {
+          font-size: 0.9rem;
+          color: #6c757d;
+        }
+        .cccux-footer .footer-link {
+          color: #007bff;
+          text-decoration: none;
+          margin: 0 0.5rem;
+        }
+        .cccux-footer .footer-link:hover {
+          color: #0056b3;
+          text-decoration: underline;
+        }
+        .cccux-footer .footer-separator {
+          color: #dee2e6;
+          margin: 0 0.25rem;
+        }
+        .cccux-footer .user-info,
+        .cccux-footer .auth-links {
+          font-size: 0.85rem;
+        }
+        .cccux-footer .container {
+          max-width: 1200px;
+          margin: 0 auto;
+          padding: 0 1rem;
+        }
+        .cccux-footer .row {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          flex-wrap: wrap;
+        }
+        .cccux-footer .col-md-6 {
+          flex: 1;
+          min-width: 300px;
+        }
+        .cccux-footer .text-end {
+          text-align: right;
+        }
+        @media (max-width: 768px) {
+          .cccux-footer .row {
+            flex-direction: column;
+            gap: 0.5rem;
+          }
+          .cccux-footer .col-md-6 {
+            text-align: center;
+          }
+          .cccux-footer .text-end {
+            text-align: center;
+          }
+        }
+      </style>
+    ERB
+    
+    # Write the footer partial
+    File.write(footer_path, footer_content)
+    puts "   ✅ Created footer partial at #{footer_path}"
+    
+    # Also create a simple include instruction for the application layout
+    layout_path = Rails.root.join('app', 'views', 'layouts', 'application.html.erb')
+    if File.exist?(layout_path)
+      layout_content = File.read(layout_path)
+      
+      # Check if footer is already included
+      unless layout_content.include?('render "shared/footer"')
+        # Add footer before closing body tag
+        if layout_content.include?('</body>')
+          updated_content = layout_content.gsub(
+            /(\s*)<\/body>/,
+            "\\1  <%= render 'shared/footer' %>\n\\1</body>"
+          )
+          File.write(layout_path, updated_content)
+          puts "   ✅ Added footer to application layout"
+        else
+          puts "   ⚠️  Could not find </body> tag in application layout - please manually add: <%= render 'shared/footer' %>"
+        end
+      else
+        puts "   ℹ️  Footer already included in application layout"
+      end
+    else
+      puts "   ⚠️  Application layout not found - please manually add: <%= render 'shared/footer' %>"
     end
   end
 
