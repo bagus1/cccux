@@ -62,35 +62,28 @@
       
       <!-- Permission Legend -->
       <div style="background-color: #e7f3ff; border: 1px solid #b8daff; padding: 1rem; border-radius: 4px; margin-bottom: 1.5rem;">
-        <h6 style="margin: 0 0 0.5rem 0; color: #004085; font-weight: bold;">Permission Context Guide:</h6>
+        <h6 style="margin: 0 0 0.5rem 0; color: #004085; font-weight: bold;">Access Types:</h6>
         <div style="font-size: 0.85rem; color: #004085; line-height: 1.4;">
           <div style="margin-bottom: 0.25rem;"><strong>Global:</strong> Access all records everywhere</div>
-          <div style="margin-bottom: 0.25rem;"><strong>Contextual:</strong> Access records within authorized scope (e.g., stores you manage)</div>
-          <div style="margin-bottom: 0.25rem;"><strong>Owned Only:</strong> Access only records you personally created</div>
-          <div style="margin-top: 0.5rem; padding-top: 0.5rem; border-top: 1px solid #b8daff;">
-            <strong>Scope:</strong> When context is "Contextual", choose between all records in scope or only owned records in scope
-          </div>
+          <div style="margin-bottom: 0.25rem;"><strong>Contextual:</strong> Access records within current route context (e.g., store-scoped resources)</div>
         </div>
       </div>
-
-
       
       <% if @available_permissions.any? %>
         <% @available_permissions.each do |subject, permissions| %>
           <div style="margin-bottom: 1.5rem; padding: 1rem; border: 1px solid #e9ecef; border-radius: 4px;">
             <h5 style="margin: 0 0 0.75rem 0; color: #495057; font-weight: bold;"><%= subject %></h5>
             
-            <!-- Action Permissions with Individual Ownership Controls -->
+            <!-- Action Permissions with Access Type Controls -->
             <div style="display: grid; grid-template-columns: 1fr; gap: 0.5rem;">
               <% permissions.each do |permission| %>
                 <% 
                   # Check if this permission is currently assigned to the role
                   is_assigned = @role.ability_permissions.include?(permission)
                   
-                  # Get the current ownership setting for this specific permission
+                  # Get the current access type for this specific permission
                   role_ability = @role.role_abilities.find_by(ability_permission: permission)
-                  is_owned = role_ability&.owned || false
-                  current_context = role_ability&.context || 'global'
+                  current_access_type = role_ability&.access_type || 'global'
                 %>
                 
                 <div style="display: flex; align-items: center; padding: 0.75rem; border: 1px solid #e9ecef; border-radius: 4px; background-color: #f8f9fa;"
@@ -108,70 +101,31 @@
                     </span>
                   </div>
                   
-                  <!-- Context and Scope Controls -->
+                  <!-- Access Type Controls -->
                   <div style="margin-left: auto; display: flex; align-items: center; gap: 1.5rem;">
-                    <!-- Context Selection -->
-                    <div style="display: flex; align-items: center; gap: 0.5rem;" class="context-controls">
+                    <div style="display: flex; align-items: center; gap: 0.5rem;" class="access-controls">
                       <span style="font-size: 0.8rem; color: #6c757d; font-weight: bold;">Access:</span>
                       
-                      <%= radio_button_tag "role[permission_context][#{permission.id}]", "global", 
-                          current_context == 'global', 
-                          id: "context_global_#{permission.id}",
+                      <%= radio_button_tag "role[permission_access_type][#{permission.id}]", "global", 
+                          current_access_type == 'global', 
+                          id: "access_global_#{permission.id}",
                           style: "margin-right: 0.25rem;",
-                          class: "context-radio",
+                          class: "access-radio",
                           disabled: !is_assigned %>
-                      <%= label_tag "context_global_#{permission.id}", "Global", 
+                      <%= label_tag "access_global_#{permission.id}", "Global", 
                           style: "font-size: 0.8rem; cursor: pointer; margin-right: 0.75rem;",
-                          class: "context-label #{is_assigned ? '' : 'text-muted'}" %>
+                          class: "access-label #{is_assigned ? '' : 'text-muted'}" %>
                       
-                      <%= radio_button_tag "role[permission_context][#{permission.id}]", "scoped", 
-                          current_context == 'scoped', 
-                          id: "context_scoped_#{permission.id}",
+                      <%= radio_button_tag "role[permission_access_type][#{permission.id}]", "contextual", 
+                          current_access_type == 'contextual', 
+                          id: "access_contextual_#{permission.id}",
                           style: "margin-right: 0.25rem;",
-                          class: "context-radio",
+                          class: "access-radio",
                           disabled: !is_assigned %>
-                      <%= label_tag "context_scoped_#{permission.id}", "Contextual", 
-                          style: "font-size: 0.8rem; cursor: pointer; margin-right: 0.75rem;",
-                          class: "context-label #{is_assigned ? '' : 'text-muted'}" %>
-                      
-                      <%= radio_button_tag "role[permission_context][#{permission.id}]", "owned", 
-                          current_context == 'owned', 
-                          id: "context_owned_#{permission.id}",
-                          style: "margin-right: 0.25rem;",
-                          class: "context-radio",
-                          disabled: !is_assigned %>
-                      <%= label_tag "context_owned_#{permission.id}", "Owned Only", 
+                      <%= label_tag "access_contextual_#{permission.id}", "Contextual", 
                           style: "font-size: 0.8rem; cursor: pointer;",
-                          class: "context-label #{is_assigned ? '' : 'text-muted'}" %>
+                          class: "access-label #{is_assigned ? '' : 'text-muted'}" %>
                     </div>
-                    
-                    <!-- Scope Controls (only show for Contextual access and models that support ownership) -->
-                    <% if permission.supports_ownership? && permission.model_supports_ownership? %>
-                      <div style="display: <%= current_context == 'scoped' && is_assigned ? 'flex' : 'none' %>; align-items: center; gap: 0.5rem;" 
-                           class="scope-controls">
-                        <span style="font-size: 0.8rem; color: #6c757d; font-weight: bold;">Scope:</span>
-                        
-                        <%= radio_button_tag "role[permission_owned][#{permission.id}]", "false", 
-                            !is_owned, 
-                            id: "scope_all_#{permission.id}",
-                            style: "margin-right: 0.25rem;",
-                            class: "scope-radio",
-                            disabled: !is_assigned || current_context != 'scoped' %>
-                        <%= label_tag "scope_all_#{permission.id}", "All in Context", 
-                            style: "font-size: 0.8rem; cursor: pointer; margin-right: 0.75rem;",
-                            class: "scope-label #{is_assigned && current_context == 'scoped' ? '' : 'text-muted'}" %>
-                        
-                        <%= radio_button_tag "role[permission_owned][#{permission.id}]", "true", 
-                            is_owned, 
-                            id: "scope_owned_#{permission.id}",
-                            style: "margin-right: 0.25rem;",
-                            class: "scope-radio",
-                            disabled: !is_assigned || current_context != 'scoped' %>
-                        <%= label_tag "scope_owned_#{permission.id}", "Owned in Context", 
-                            style: "font-size: 0.8rem; cursor: pointer;",
-                            class: "scope-label #{is_assigned && current_context == 'scoped' ? '' : 'text-muted'}" %>
-                      </div>
-                    <% end %>
                   </div>
                 </div>
               <% end %>
@@ -190,27 +144,17 @@
   <!-- Enhanced JavaScript for permission interactions -->
   <script>
     document.addEventListener('DOMContentLoaded', function() {
-                    // Handle permission checkbox changes
+      // Handle permission checkbox changes
       document.querySelectorAll('.permission-checkbox').forEach(function(checkbox) {
         checkbox.addEventListener('change', function() {
           updatePermissionControls(this.dataset.permissionId);
-          updateImplementationGuide();
         });
       });
 
-      // Handle context radio button changes
-      document.querySelectorAll('.context-radio').forEach(function(radio) {
+      // Handle access radio button changes
+      document.querySelectorAll('.access-radio').forEach(function(radio) {
         radio.addEventListener('change', function() {
-          const permissionId = this.name.match(/\[(\d+)\]/)[1];
-          updateScopeVisibility(permissionId);
-          updateImplementationGuide();
-        });
-      });
-
-      // Handle scope radio button changes  
-      document.querySelectorAll('.scope-radio').forEach(function(radio) {
-        radio.addEventListener('change', function() {
-          updateImplementationGuide();
+          // Future: Add any access type specific logic here
         });
       });
 
@@ -218,376 +162,44 @@
       document.querySelectorAll('.permission-checkbox').forEach(function(checkbox) {
         updatePermissionControls(checkbox.dataset.permissionId);
       });
-      
-      // Initialize implementation guide
-      updateImplementationGuide();
 
       function updatePermissionControls(permissionId) {
         const checkbox = document.querySelector(`input[data-permission-id="${permissionId}"]`);
         const permissionRow = document.querySelector(`div[data-permission-id="${permissionId}"]`);
-        const contextControls = permissionRow.querySelectorAll('.context-radio');
-        const contextLabels = permissionRow.querySelectorAll('.context-label');
-        const scopeControls = permissionRow.querySelectorAll('.scope-radio');
-        const scopeLabels = permissionRow.querySelectorAll('.scope-label');
+        const accessControls = permissionRow.querySelectorAll('.access-radio');
+        const accessLabels = permissionRow.querySelectorAll('.access-label');
         
         if (checkbox.checked) {
-          // Enable context controls
-          contextControls.forEach(control => {
+          // Enable access controls
+          accessControls.forEach(control => {
             control.disabled = false;
           });
-          contextLabels.forEach(label => {
+          accessLabels.forEach(label => {
             label.classList.remove('text-muted');
             label.style.opacity = '1';
           });
-          
-          // Update scope visibility based on current context
-          updateScopeVisibility(permissionId);
         } else {
           // Disable all controls
-          contextControls.forEach(control => {
+          accessControls.forEach(control => {
             control.disabled = true;
           });
-          contextLabels.forEach(label => {
-            label.classList.add('text-muted');
-            label.style.opacity = '0.5';
-          });
-          
-          scopeControls.forEach(control => {
-            control.disabled = true;
-          });
-          scopeLabels.forEach(label => {
-            label.classList.add('text-muted');
-            label.style.opacity = '0.5';
-          });
-          
-          // Hide scope controls
-          const scopeContainer = permissionRow.querySelector('.scope-controls');
-          if (scopeContainer) {
-            scopeContainer.style.display = 'none';
-          }
-        }
-      }
-
-      function updateScopeVisibility(permissionId) {
-        const checkbox = document.querySelector(`input[data-permission-id="${permissionId}"]`);
-        const permissionRow = document.querySelector(`div[data-permission-id="${permissionId}"]`);
-        const scopeContainer = permissionRow.querySelector('.scope-controls');
-        const scopeControls = permissionRow.querySelectorAll('.scope-radio');
-        const scopeLabels = permissionRow.querySelectorAll('.scope-label');
-        
-        if (!scopeContainer) return; // No scope controls for this permission
-        
-        const contextualRadio = document.querySelector(`#context_scoped_${permissionId}`);
-        const isContextual = contextualRadio && contextualRadio.checked;
-        const isPermissionEnabled = checkbox.checked;
-        
-        if (isPermissionEnabled && isContextual) {
-          // Show and enable scope controls
-          scopeContainer.style.display = 'flex';
-          scopeControls.forEach(control => {
-            control.disabled = false;
-          });
-          scopeLabels.forEach(label => {
-            label.classList.remove('text-muted');
-            label.style.opacity = '1';
-          });
-        } else {
-          // Hide scope controls
-          scopeContainer.style.display = 'none';
-          scopeControls.forEach(control => {
-            control.disabled = true;
-          });
-          scopeLabels.forEach(label => {
+          accessLabels.forEach(label => {
             label.classList.add('text-muted');
             label.style.opacity = '0.5';
           });
         }
       }
 
-      function updateImplementationGuide() {
-        const guideBox = document.getElementById('implementation-guide');
-        const guideContent = document.getElementById('guide-content');
-        
-        if (!guideBox || !guideContent) {
-          console.error('Implementation guide elements not found!');
-          return;
-        }
-        
-        // Collect all selected permissions by model
-        const selectedPermissions = {};
-        
-        document.querySelectorAll('.permission-checkbox:checked').forEach(checkbox => {
-          const permissionId = checkbox.dataset.permissionId;
-          const permissionRow = document.querySelector(`div[data-permission-id="${permissionId}"]`);
-          
-          // Find the model name by looking at the section container
-          // The structure is: section div > h5 (model name) > permissions grid > permission row
-          let modelName = 'Unknown';
-          let actionName = 'Unknown';
-          
-          try {
-            // Look for the parent section container
-            let sectionContainer = permissionRow;
-            while (sectionContainer && !sectionContainer.querySelector('h5')) {
-              sectionContainer = sectionContainer.parentElement;
-            }
-            
-            if (sectionContainer) {
-              const h5Element = sectionContainer.querySelector('h5');
-              if (h5Element) {
-                modelName = h5Element.textContent.trim();
-              }
-            }
-            
-            // Get action name from the span next to the checkbox
-            const actionSpan = checkbox.parentElement.querySelector('span');
-            if (actionSpan) {
-              actionName = actionSpan.textContent.trim();
-            }
-          } catch (error) {
-            console.error('Error finding model/action names:', error);
-            console.log('Permission row:', permissionRow);
-          }
-          
-          // Get context and scope settings
-          const contextRadio = document.querySelector(`input[name="role[permission_context][${permissionId}]"]:checked`);
-          const scopeRadio = document.querySelector(`input[name="role[permission_owned][${permissionId}]"]:checked`);
-          
-          const context = contextRadio ? contextRadio.value : 'global';
-          const isOwned = scopeRadio ? scopeRadio.value === 'true' : false;
-          
-          if (!selectedPermissions[modelName]) {
-            selectedPermissions[modelName] = [];
-          }
-          
-          selectedPermissions[modelName].push({
-            action: actionName,
-            context: context,
-            isOwned: isOwned
-          });
-        });
-        
-        // If no special permissions, hide the guide
-        const hasSpecialPermissions = Object.values(selectedPermissions).some(permissions =>
-          permissions.some(p => p.context !== 'global')
-        );
-        
-        if (!hasSpecialPermissions) {
-          guideBox.style.display = 'none';
-          return;
-        }
-        
-        // Generate implementation guide
-        let guideHTML = '';
-        
-        Object.entries(selectedPermissions).forEach(([modelName, permissions]) => {
-          const specialPermissions = permissions.filter(p => p.context !== 'global');
-          
-          if (specialPermissions.length === 0) return;
-          
-          const controllerName = modelName === 'User' ? 'Users' : 
-                                modelName === 'Cccux::Role' ? 'Roles' :
-                                modelName === 'Cccux::AbilityPermission' ? 'AbilityPermissions' :
-                                `${modelName}s`;
-          
-          guideHTML += `
-            <div style="margin-bottom: 2rem; border: 1px solid #e9ecef; border-radius: 8px; overflow: hidden;">
-              <div style="background-color: #f8f9fa; padding: 1rem; border-bottom: 1px solid #e9ecef;">
-                <h4 style="margin: 0; color: #495057; display: flex; align-items: center;">
-                  <span style="margin-right: 0.5rem;">📋</span>${modelName} Implementation
-                </h4>
-              </div>
-              
-              <div style="padding: 1.5rem;">
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem;">
-                  <!-- Controller Setup -->
-                  <div>
-                    <h5 style="margin: 0 0 1rem 0; color: #007bff; display: flex; align-items: center;">
-                      <span style="margin-right: 0.5rem;">🎮</span>${controllerName}Controller
-                    </h5>
-                    
-                    ${generateControllerCode(modelName, specialPermissions)}
-                  </div>
-                  
-                  <!-- Model Setup -->
-                  <div>
-                    <h5 style="margin: 0 0 1rem 0; color: #28a745; display: flex; align-items: center;">
-                      <span style="margin-right: 0.5rem;">🏗️</span>${modelName} Model
-                    </h5>
-                    
-                    ${generateModelCode(modelName, specialPermissions)}
-                  </div>
-                </div>
-                
-                <!-- Permission Summary -->
-                <div style="margin-top: 1.5rem; padding: 1rem; background-color: #f8f9fa; border-radius: 4px;">
-                  <h6 style="margin: 0 0 0.5rem 0; color: #495057;">Selected Permissions:</h6>
-                  <div style="display: flex; flex-wrap: wrap; gap: 0.5rem;">
-                    ${specialPermissions.map(p => `
-                      <span style="background-color: ${getPermissionColor(p.context)}; color: white; padding: 0.25rem 0.5rem; border-radius: 3px; font-size: 0.8rem;">
-                        ${p.action} (${p.context}${p.isOwned ? ', owned' : ''})
-                      </span>
-                    `).join('')}
-                  </div>
-                </div>
-              </div>
-            </div>
-          `;
-        });
-        
-        // Add quick setup section
-        guideHTML += `
-          <div style="background-color: #e8f4f8; border: 1px solid #bee5eb; border-radius: 8px; padding: 1.5rem;">
-            <h5 style="margin: 0 0 1rem 0; color: #0c5460; display: flex; align-items: center;">
-              <span style="margin-right: 0.5rem;">🚀</span>Quick Setup Option
-            </h5>
-            <p style="margin: 0 0 1rem 0; color: #0c5460;">
-              For faster implementation, use our pre-built concerns that handle most of the setup automatically:
-            </p>
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
-              <div>
-                <strong>Controller:</strong>
-                <code style="display: block; background-color: #f8f9fa; padding: 0.5rem; border-radius: 3px; margin-top: 0.25rem;">
-                  include Cccux::NestedAuthorizationController
-                </code>
-              </div>
-              <div>
-                <strong>Model:</strong>
-                <code style="display: block; background-color: #f8f9fa; padding: 0.5rem; border-radius: 3px; margin-top: 0.25rem;">
-                  include Cccux::ScopedOwnership
-                </code>
-              </div>
-            </div>
-          </div>
-        `;
-        
-        guideContent.innerHTML = guideHTML;
-        guideBox.style.display = 'block';
-      }
-      
-      function generateControllerCode(modelName, permissions) {
-        const hasContextual = permissions.some(p => p.context === 'scoped');
-        const hasOwned = permissions.some(p => p.context === 'owned');
-        
-        let code = '';
-        
-        if (hasContextual || hasOwned) {
-          code += `
-            <div style="margin-bottom: 1rem;">
-              <strong>Required Concerns:</strong>
-              <pre style="background-color: #f8f9fa; padding: 0.75rem; border-radius: 4px; margin: 0.5rem 0; font-size: 0.9rem; overflow-x: auto;"><code>include Cccux::ContextAware</code></pre>
-            </div>
-          `;
-        }
-        
-        if (hasContextual) {
-          const contextKey = modelName.toLowerCase().replace('::', '_');
-          code += `
-            <div style="margin-bottom: 1rem;">
-              <strong>Context Override:</strong>
-              <pre style="background-color: #f8f9fa; padding: 0.75rem; border-radius: 4px; margin: 0.5rem 0; font-size: 0.9rem; overflow-x: auto;"><code>private
-
-def current_ability
-  @current_ability ||= Cccux::Ability.new(
-    current_user, 
-    { ${contextKey}: params[:${contextKey}_id] }
-  )
-end</code></pre>
-            </div>
-          `;
-        }
-        
-        code += `
-          <div>
-            <strong>Authorization:</strong>
-            <pre style="background-color: #f8f9fa; padding: 0.75rem; border-radius: 4px; margin: 0.5rem 0; font-size: 0.9rem; overflow-x: auto;"><code>load_and_authorize_resource</code></pre>
-          </div>
-        `;
-        
-        return code;
-      }
-      
-      function generateModelCode(modelName, permissions) {
-        const hasContextual = permissions.some(p => p.context === 'scoped');
-        const hasOwned = permissions.some(p => p.context === 'owned' || p.isOwned);
-        
-        let code = '';
-        
-        if (hasContextual || hasOwned) {
-          code += `
-            <div style="margin-bottom: 1rem;">
-              <strong>Required Concerns:</strong>
-              <pre style="background-color: #f8f9fa; padding: 0.75rem; border-radius: 4px; margin: 0.5rem 0; font-size: 0.9rem; overflow-x: auto;"><code>include Cccux::ScopedOwnership</code></pre>
-            </div>
-          `;
-        }
-        
-        if (hasOwned) {
-          code += `
-            <div style="margin-bottom: 1rem;">
-              <strong>Ownership Association:</strong>
-              <pre style="background-color: #f8f9fa; padding: 0.75rem; border-radius: 4px; margin: 0.5rem 0; font-size: 0.9rem; overflow-x: auto;"><code>belongs_to :user</code></pre>
-            </div>
-          `;
-        }
-        
-        if (hasContextual) {
-          code += `
-            <div style="margin-bottom: 1rem;">
-              <strong>Scope Method:</strong>
-              <pre style="background-color: #f8f9fa; padding: 0.75rem; border-radius: 4px; margin: 0.5rem 0; font-size: 0.9rem; overflow-x: auto;"><code>def in_current_scope?(context = {})
-  # Implement your scoping logic here
-  # Example: context[:store_id] == self.store_id
-  true
-end</code></pre>
-            </div>
-          `;
-        }
-        
-        return code;
-      }
-      
-      function getPermissionColor(context) {
-        switch(context) {
-          case 'global': return '#6c757d';
-          case 'scoped': return '#007bff';
-          case 'owned': return '#28a745';
-          default: return '#6c757d';
-        }
-      }
-
-      // Add CSS for muted text and code styling
+      // Add CSS for muted text
       const style = document.createElement('style');
       style.textContent = `
         .text-muted {
           color: #6c757d !important;
         }
-        code {
-          background-color: #f8f9fa;
-          padding: 0.2rem 0.4rem;
-          border-radius: 3px;
-          font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
-          font-size: 0.875em;
-          color: #e83e8c;
-        }
       `;
       document.head.appendChild(style);
     });
   </script>
-
-  <!-- Implementation Guide -->
-  <div id="implementation-guide" style="display: none; background-color: white; border: 1px solid #dee2e6; border-radius: 8px; padding: 1.5rem; margin-bottom: 2rem;">
-    <h3 style="margin-top: 0; color: #495057; display: flex; align-items: center;">
-      <span style="margin-right: 0.5rem;">⚙️</span>Implementation Guide
-    </h3>
-    <p style="color: #6c757d; margin-bottom: 1.5rem;">
-      Based on your permission selections, here's what you need to implement:
-    </p>
-    
-    <div id="guide-content">
-      <!-- Content will be dynamically populated by JavaScript -->
-    </div>
-  </div>
 
   <!-- Form Actions -->
   <div style="background-color: white; border: 1px solid #dee2e6; border-radius: 8px; padding: 1.5rem;">

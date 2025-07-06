@@ -4,11 +4,12 @@ CCCUX is a Rails engine that provides comprehensive role-based authorization wit
 
 ## Features
 
+- **UX for Creating and Managing Roles**: Intuitive web interface for role creation and permission management
 - **Role-Based Authorization**: Define roles with granular permissions
 - **CanCanCan Integration**: Seamless integration with CanCanCan authorization library
-- **Flexible Permissions**: CRUD permissions with ownership scoping options
-- **Context-Aware Authorization**: Support for global, owned, and scoped permissions
-- **Ownership Scoping**: Automatic filtering based on user ownership and relationships
+- **Flexible Permissions**: CRUD permissions with global and contextual access types
+- **Context-Aware Authorization**: Support for route-based context scoping
+- **Nested Resource Support**: Automatic handling of nested routes with CanCanCan's `:through` option
 - **Admin Interface**: Clean, intuitive interface for role management
 - **Drag & Drop Reordering**: Visual role priority management
 - **Rails 8 Compatible**: Works with Rails 8 and Propshaft asset pipeline
@@ -25,8 +26,26 @@ gem 'cccux', path: 'path/to/cccux'
 ### 2. Run the Installer
 
 ```bash
-rails generate cccux:install
+rails cccux:setup
 ```
+
+This command will:
+1. Check if Devise is installed and guide you through installation if needed
+2. Create a "Role Manager" user account for admin access
+3. Mount the CCCUX engine in your application
+4. Set up initial database tables and seed data
+
+### 4. Configure Your Application
+
+Start your server and navigate to `http://localhost:3000/cccux`:
+
+1. **Model Discovery**: Click "Model Discovery" to select which models should have role-based authorization
+2. **Roles Management**: Go to "Roles" to see the default roles (Role Manager, Basic User, Guest)
+3. **Create Custom Roles**: Create new roles and assign fine-grained permissions
+4. **Permission Management**: Visit "Permissions" to add new actions for your models
+
+**Pro Tip**: When you add new controller actions, visit the "Permissions" section, select your model, and click "Create new Permission" to make the new action available for role assignment. 
+
 
 ### 3. Set Up Your Models
 
@@ -222,60 +241,55 @@ class User < ApplicationRecord
 end
 ```
 
-### Models with Scoped Ownership
+### Models with Nested Resources
 
-For models with complex ownership patterns (owner + parent relationships):
+For models that belong to other resources (like products belonging to stores):
 
 ```ruby
 class Product < ApplicationRecord
-  include Cccux::ScopedOwnership
-  
   belongs_to :user
   belongs_to :store
   
-  # Configure ownership patterns
-  scoped_ownership owner: :user, parent: :store, manager_through: :store_managers
-end
-```
-
-This automatically provides:
-- `owned_by?(user)` method that checks both direct ownership and parent management
-- `scoped_for_user(user)` method that returns records the user can access
-- `in_current_scope?(record, user, context)` method for context-aware authorization
-
-### Ownership Configuration Options
-
-The `scoped_ownership` method accepts these parameters:
-
-```ruby
-scoped_ownership(
-  owner: :user,                    # Direct owner association
-  parent: :store,                  # Parent association for management
-  manager_through: :store_managers, # Association to check management
-  through: :order                  # Optional: indirect relationship
-)
-```
-
-## Authorization Patterns
-
-### Primary Pattern: `Model.owned`
-
-Use the `owned` scope for automatic ownership filtering:
-
-```ruby
-class UsersController < Cccux::AuthorizationController
-  def index
-    @users = User.owned(current_ability).includes(:cccux_roles)
+  # Implement ownership check for contextual permissions
+  def owned_by?(user)
+    return false unless user&.persisted?
+    user_id == user.id || store.store_managers.exists?(user: user)
   end
 end
 ```
 
-### Context-Aware Authorization
+This provides:
+- `owned_by?(user)` method that checks both direct ownership and store management
+- Automatic filtering when accessed through nested routes
 
-For nested resources with context:
+## Authorization Patterns
+
+### Nested Resource Authorization
+
+For controllers with nested resources, use CanCanCan's `:through` option:
 
 ```ruby
 class ProductsController < Cccux::AuthorizationController
+  # Load store when store_id is present (nested routes)
+  load_and_authorize_resource :store, if: -> { params[:store_id].present? }
+  # Load product through store for nested routes, directly for standalone routes  
+  load_and_authorize_resource :product, through: :store, if: -> { params[:store_id].present? }
+  load_and_authorize_resource :product, unless: -> { params[:store_id].present? }
+
+  def index
+    if params[:store_id].present?
+      # Nested route: /stores/:store_id/products
+      @products = @store.products.order(:name)
+    else
+      # Standalone route: /products
+      # Handle case where @products might be nil due to authorization filtering
+      @products = @products&.order(:name) || Product.none
+    end
+  end
+
+  private
+
+  # Override current_ability to provide store context for contextual permissions
   def current_ability
     context = {}
     context[:store_id] = @store.id if @store
@@ -284,17 +298,22 @@ class ProductsController < Cccux::AuthorizationController
 end
 ```
 
-### Legacy Pattern: `accessible_by(current_ability)`
+### Standard Authorization
 
-For complex queries that can't use the `owned` scope:
+For simple controllers without nested resources:
 
 ```ruby
 class UsersController < Cccux::AuthorizationController
+  load_and_authorize_resource
+  
   def index
-    @users = User.accessible_by(current_ability).includes(:cccux_roles)
+    # Handle case where @users might be nil due to authorization filtering
+    @users = @users&.order(:name) || User.none
   end
 end
 ```
+
+**Important**: When using `load_and_authorize_resource`, the collection might be `nil` if the user has contextual permissions but no context is provided. Always use the safe navigation operator (`&.`) and provide a fallback (like `Model.none`) to avoid `NoMethodError`.
 
 ## Role Management
 
@@ -304,22 +323,28 @@ end
 # Create a basic user role
 role = Cccux::Role.create!(
   name: 'Basic User',
-  priority: 50,
-  permissions_attributes: [
-    { resource: 'User', actions: ['read', 'update'], ownership_scope: 'owned' },
-    { resource: 'Store', actions: ['read'], ownership_scope: 'owned' }
-  ]
+  priority: 50
+)
+
+# Add permissions with global access
+role.role_abilities.create!(
+  ability_permission: Cccux::AbilityPermission.find_by(action: 'read', subject: 'User'),
+  access_type: 'global'
 )
 
 # Create a store manager role
 role = Cccux::Role.create!(
   name: 'Store Manager',
-  priority: 15,
-  permissions_attributes: [
-    { resource: 'Product', actions: ['read', 'create', 'update', 'destroy'], ownership_scope: 'scoped' },
-    { resource: 'Order', actions: ['read', 'create', 'update', 'destroy'], ownership_scope: 'scoped' }
-  ]
+  priority: 15
 )
+
+# Add permissions with contextual access
+['read', 'create', 'update', 'destroy'].each do |action|
+  role.role_abilities.create!(
+    ability_permission: Cccux::AbilityPermission.find_by(action: action, subject: 'Product'),
+    access_type: 'contextual'
+  )
+end
 ```
 
 ### Assigning Roles to Users
@@ -337,24 +362,19 @@ user.can?(:update, @store)       # => true/false
 user.has_role?('Role Manager')   # => true/false
 ```
 
-## Permission Contexts
+## Permission Access Types
 
-CCCUX supports three permission contexts:
+CCCUX supports two access types for permissions:
 
-### 1. Global Context
+### 1. Global Access
 - **Access**: User can access any record of this type
 - **Use case**: System administrators, global managers
 - **Example**: Role Manager can manage all roles
 
-### 2. Owned Context  
-- **Access**: User can only access records they own
-- **Use case**: Basic users, personal data
-- **Example**: Users can only edit their own profile
-
-### 3. Scoped Context
-- **Access**: User can access records within a specific scope/context
+### 2. Contextual Access
+- **Access**: User can access records within the current route context
 - **Use case**: Store managers, project members
-- **Example**: Store managers can manage products in their stores
+- **Example**: Store managers can manage products in their stores (when accessed via `/stores/:store_id/products`)
 
 ## View Helpers
 

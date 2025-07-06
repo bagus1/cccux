@@ -128,8 +128,7 @@ module Cccux
     
     def update_permissions
       permission_ids = params[:role][:ability_permission_ids] || []
-      permission_owned = params[:role][:permission_owned] || {}
-      permission_context = params[:role][:permission_context] || {}
+      permission_access_type = params[:role][:permission_access_type] || {}
       
       # Clear existing role abilities
       @role.role_abilities.destroy_all
@@ -137,24 +136,15 @@ module Cccux
       # Get selected permissions
       selected_permissions = Cccux::AbilityPermission.where(id: permission_ids)
       
-      # Create role abilities with individual ownership and context settings
+      # Create role abilities with access type settings
       selected_permissions.each do |permission|
-        # Determine ownership setting for this specific permission
-        # Default to false (all records) for CCCUX models, or based on form input
-        is_owned = if permission.subject.start_with?('Cccux::')
-          false # CCCUX models always have access to all records
-        else
-          permission_owned[permission.id.to_s] == 'true'
-        end
-        
-        # Determine context setting for this specific permission
+        # Determine access type for this specific permission
         # Default to 'global' for backward compatibility
-        context = permission_context[permission.id.to_s] || 'global'
+        access_type = permission_access_type[permission.id.to_s] || 'global'
         
         @role.role_abilities.create!(
           ability_permission: permission,
-          owned: is_owned,
-          context: context
+          access_type: access_type
         )
       end
     end

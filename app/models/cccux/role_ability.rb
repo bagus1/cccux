@@ -5,10 +5,14 @@ module Cccux
     belongs_to :role, class_name: 'Cccux::Role'
     belongs_to :ability_permission, class_name: 'Cccux::AbilityPermission'
     
+    # New: access field (enum: global, contextual)
+    ACCESS_TYPES = %w[global contextual].freeze
+    
+    # For now, keep validations for owned/context for backward compatibility
     validates :role_id, presence: true
     validates :ability_permission_id, presence: true
-    validates :owned, inclusion: { in: [true, false] }
     validates :context, inclusion: { in: %w[global owned scoped], allow_nil: true }
+    validates :owned, inclusion: { in: [true, false] }
     
     # Ensure unique combinations of role, permission, ownership scope, and context
     validates :ability_permission_id, uniqueness: { 
@@ -16,30 +20,33 @@ module Cccux
       message: "already exists for this role, ownership scope, and context" 
     }
     
-    scope :owned_only, -> { where(owned: true) }
-    scope :all_records, -> { where(owned: false) }
-    scope :global_context, -> { where(context: 'global') }
-    scope :owned_context, -> { where(context: 'owned') }
-    scope :scoped_context, -> { where(context: 'scoped') }
+    scope :global_access, -> { where(context: 'global') }
+    scope :contextual_access, -> { where(context: 'scoped') }
+    
+    # New: access_type returns 'global' or 'contextual' for new system
+    def access_type
+      case context
+      when 'global'
+        'global'
+      when 'scoped'
+        'contextual'
+      else
+        'global' # fallback
+      end
+    end
     
     def display_name
       "#{role.name} - #{ability_permission.display_name}"
     end
 
-    def scope_description
-      owned? ? "Owned records only" : "All records"
-    end
-    
-    def context_description
-      case context
+    def access_description
+      case access_type
       when 'global'
         "Global access"
-      when 'owned'
-        "Owned context only"
-      when 'scoped'
-        "Scoped context only"
+      when 'contextual'
+        "Contextual (store/project/etc) access"
       else
-        "Unknown context"
+        "Unknown access"
       end
     end
   end

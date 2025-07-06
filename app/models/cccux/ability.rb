@@ -53,70 +53,37 @@ module Cccux
         @defined_permissions.add(permission_key)
         
         # Define the ability based on context and ownership
-        apply_contextual_ability(role_ability, permission, model_class, user)
+        apply_access_ability(role_ability, permission, model_class, user)
       end
     end
     
-    def apply_contextual_ability(role_ability, permission, model_class, user)
+    def apply_access_ability(role_ability, permission, model_class, user)
       action = permission.action.to_sym
       
-      case role_ability.context
-      when 'global'
-        # Global access - can access the resource from any context
-        if role_ability.owned && user&.persisted?
+      # For User resource, keep owned logic for now
+      if permission.subject == 'User'
+        if role_ability.context == 'owned' || (role_ability.owned && user&.persisted?)
           apply_owned_ability(action, model_class, user)
         else
           can action, model_class
         end
-        
-      when 'owned'
-        # Owned context only - can only access through owned relationships
-        if role_ability.owned && user&.persisted?
-          apply_owned_ability(action, model_class, user)
-        else
-          # For non-owned permissions in owned context, still restrict to owned relationships
-          apply_owned_ability(action, model_class, user)
-        end
-        
-      when 'scoped'
-        # Scoped context only - can only access through specific route contexts
-        if role_ability.owned && user&.persisted?
-          apply_scoped_owned_ability(action, model_class, user)
-        else
-          apply_scoped_ability(action, model_class, user)
-        end
-        
       else
-        # Default to global behavior for backward compatibility
-        if role_ability.owned && user&.persisted?
-          apply_owned_ability(action, model_class, user)
+        # For all other resources, use only global/contextual
+        case role_ability.access_type
+        when 'global'
+          can action, model_class
+        when 'contextual'
+          can action, model_class do |record|
+            if model_class.respond_to?(:in_current_scope?)
+              model_class.in_current_scope?(record, user, @context)
+            else
+              Rails.logger.warn "CCCUX: #{model_class.name} doesn't implement in_current_scope? method for contextual permissions"
+              false
+            end
+          end
         else
           can action, model_class
         end
-      end
-    end
-    
-    def apply_scoped_ability(action, model_class, user)
-      # For scoped context, delegate to the model to determine if it's in the current scope
-      can action, model_class do |record|
-        if model_class.respond_to?(:in_current_scope?)
-          model_class.in_current_scope?(record, user, @context)
-        else
-          # Fallback: if model doesn't implement in_current_scope?, deny access
-          Rails.logger.warn "CCCUX: #{model_class.name} doesn't implement in_current_scope? method for scoped permissions"
-          false
-        end
-      end
-    end
-    
-    def apply_scoped_owned_ability(action, model_class, user)
-      # For scoped owned context, combine scoping with ownership
-      can action, model_class do |record|
-        # First check ownership, then check scoped context
-        record_owned_by_user?(record, user) && 
-          (model_class.respond_to?(:in_current_scope?) ? 
-            model_class.in_current_scope?(record, user, @context) : 
-            (Rails.logger.warn("CCCUX: #{model_class.name} doesn't implement in_current_scope? method for scoped permissions") || false))
       end
     end
     
@@ -161,18 +128,6 @@ module Cccux
       # If the model doesn't exist, we can't define permissions for it
       Rails.logger.warn "CCCUX: Model '#{subject}' not found, skipping permission"
       nil
-    end
-    
-    def record_owned_by_user?(record, user)
-      if record.respond_to?(:owned_by?)
-        record.owned_by?(user)
-      elsif record.respond_to?(:user_id)
-        record.user_id == user.id
-      elsif record.respond_to?(:creator_id)
-        record.creator_id == user.id
-      else
-        false
-      end
     end
   end
 end
