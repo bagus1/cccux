@@ -68,19 +68,10 @@ module Cccux
           can action, model_class
         end
       else
-        # For all other resources, use global/contextual/owned
+        # For all other resources, use global/owned (contextual is now handled by owned with configuration)
         case role_ability.access_type
         when 'global'
           can action, model_class
-        when 'contextual'
-          can action, model_class do |record|
-            if model_class.respond_to?(:in_current_scope?)
-              model_class.in_current_scope?(record, user, @context)
-            else
-              Rails.logger.warn "CCCUX: #{model_class.name} doesn't implement in_current_scope? method for contextual permissions"
-              false
-            end
-          end
         when 'owned'
           apply_owned_ability(action, model_class, user, role_ability)
         else

@@ -65,8 +65,7 @@
         <h6 style="margin: 0 0 0.5rem 0; color: #004085; font-weight: bold;">Access Types:</h6>
         <div style="font-size: 0.85rem; color: #004085; line-height: 1.4;">
           <div style="margin-bottom: 0.25rem;"><strong>Global:</strong> Access all records everywhere</div>
-          <div style="margin-bottom: 0.25rem;"><strong>Contextual:</strong> Access records within current route context (e.g., store-scoped resources)</div>
-          <div style="margin-bottom: 0.25rem;"><strong>Owned:</strong> Access only to records owned by the current user</div>
+          <div style="margin-bottom: 0.25rem;"><strong>Owned:</strong> Access records you own, or records you have access to via a parent/manager relationship (e.g., store manager can access all orders in their store). Configure the ownership model and keys below to define what "owned" means for this permission.</div>
         </div>
       </div>
       
@@ -89,7 +88,7 @@
                 
                 <div style="display: flex; align-items: center; padding: 0.75rem; border: 1px solid #e9ecef; border-radius: 4px; background-color: #f8f9fa;"
                      data-permission-id="<%= permission.id %>">
-                  <!-- Permission Checkbox -->
+                  
                   <div style="margin-right: 1rem; min-width: 100px;">
                     <%= check_box_tag "role[ability_permission_ids][]", 
                         permission.id, 
@@ -104,39 +103,27 @@
                   
                   <!-- Access Type Controls -->
                   <div style="margin-left: auto; display: flex; align-items: center; gap: 1.5rem;">
-                    <div style="display: flex; align-items: center; gap: 0.5rem;" class="access-controls">
-                      <span style="font-size: 0.8rem; color: #6c757d; font-weight: bold;">Access:</span>
-                      
-                      <%= radio_button_tag "role[permission_access_type][#{permission.id}]", "global", 
-                          current_access_type == 'global', 
-                          id: "access_global_#{permission.id}",
-                          style: "margin-right: 0.25rem;",
-                          class: "access-radio",
-                          disabled: !is_assigned %>
-                      <%= label_tag "access_global_#{permission.id}", "Global", 
-                          style: "font-size: 0.8rem; cursor: pointer; margin-right: 0.75rem;",
-                          class: "access-label #{is_assigned ? '' : 'text-muted'}" %>
-                      
-                      <%= radio_button_tag "role[permission_access_type][#{permission.id}]", "contextual", 
-                          current_access_type == 'contextual', 
-                          id: "access_contextual_#{permission.id}",
-                          style: "margin-right: 0.25rem;",
-                          class: "access-radio",
-                          disabled: !is_assigned %>
-                      <%= label_tag "access_contextual_#{permission.id}", "Contextual", 
-                          style: "font-size: 0.8rem; cursor: pointer; margin-right: 0.75rem;",
-                          class: "access-label #{is_assigned ? '' : 'text-muted'}" %>
-                      
-                      <%= radio_button_tag "role[permission_access_type][#{permission.id}]", "owned", 
-                          current_access_type == 'owned', 
-                          id: "access_owned_#{permission.id}",
-                          style: "margin-right: 0.25rem;",
-                          class: "access-radio",
-                          disabled: !is_assigned %>
-                      <%= label_tag "access_owned_#{permission.id}", "Owned", 
-                          style: "font-size: 0.8rem; cursor: pointer;",
-                          class: "access-label #{is_assigned ? '' : 'text-muted'}" %>
-                    </div>
+                    <span style="font-size: 0.8rem; color: #6c757d; font-weight: bold;">Access:</span>
+                    
+                    <%= radio_button_tag "role[permission_access_type][#{permission.id}]", "global", 
+                        current_access_type == 'global', 
+                        id: "access_global_#{permission.id}",
+                        style: "margin-right: 0.25rem;",
+                        class: "access-radio",
+                        disabled: !is_assigned %>
+                    <%= label_tag "access_global_#{permission.id}", "Global", 
+                        style: "font-size: 0.8rem; cursor: pointer; margin-right: 0.75rem;",
+                        class: "access-label #{is_assigned ? '' : 'text-muted'}" %>
+                    
+                    <%= radio_button_tag "role[permission_access_type][#{permission.id}]", "owned", 
+                        current_access_type == 'owned', 
+                        id: "access_owned_#{permission.id}",
+                        style: "margin-right: 0.25rem;",
+                        class: "access-radio",
+                        disabled: !is_assigned %>
+                    <%= label_tag "access_owned_#{permission.id}", "Owned", 
+                        style: "font-size: 0.8rem; cursor: pointer;",
+                        class: "access-label #{is_assigned ? '' : 'text-muted'}" %>
                   </div>
                 </div>
                 

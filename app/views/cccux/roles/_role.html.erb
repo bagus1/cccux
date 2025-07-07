@@ -33,7 +33,7 @@
                   <% 
                     # Get the role ability to check ownership
                     role_ability = role.role_abilities.find_by(ability_permission: permission)
-                    is_owned = role_ability&.owned || false
+                    access_type = role_ability&.access_type || 'global'
                     
                     # Determine if this permission supports ownership
                     supports_ownership = permission.supports_ownership? && permission.model_supports_ownership?
@@ -41,7 +41,7 @@
                   <span style="display: inline-block; background-color: #e7f3ff; color: #0066cc; padding: 0.1rem 0.5rem; border-radius: 3px; font-size: 0.75rem; margin-right: 0.25rem; margin-bottom: 0.15rem;">
                     <%= permission.action %>
                     <% if supports_ownership %>
-                      <span style="color: #888; font-size: 0.72em; margin-left: 0.2em;">(<%= is_owned ? 'owned' : 'all' %>)</span>
+                      <span style="color: #888; font-size: 0.72em; margin-left: 0.2em;">(<%= access_type %>)</span>
                     <% end %>
                   </span>
                 <% end %>

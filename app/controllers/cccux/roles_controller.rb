@@ -171,10 +171,7 @@ module Cccux
         case access_type
         when 'owned'
           is_owned = true
-          context_value = 'global' # context doesn't matter when owned=true
-        when 'contextual'
-          is_owned = false
-          context_value = 'scoped'
+          context_value = 'owned'
         else # 'global'
           is_owned = false
           context_value = 'global'
