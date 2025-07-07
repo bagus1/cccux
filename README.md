@@ -167,7 +167,21 @@ end
 
 ## View Helpers
 
-Use the built-in view helpers for authorization checks:
+CCCUX provides convenient view helpers that automatically handle authorization checks:
+
+### Authorization-Aware Helpers
+
+```erb
+<!-- These helpers only render if user has permission -->
+<%= link_if_can_show @product, "View Product", product_path(@product) %>
+<%= link_if_can_edit @product, "Edit Product", edit_product_path(@product) %>
+<%= link_if_can_create Product.new, "New Product", new_product_path %>
+<%= button_if_can_destroy @product, "Delete", product_path(@product), method: :delete %>
+```
+
+### Traditional CanCanCan Helpers
+
+You can also use standard CanCanCan patterns:
 
 ```erb
 <% if can? :read, @product %>
@@ -187,6 +201,41 @@ Use the built-in view helpers for authorization checks:
               confirm: "Are you sure?" %>
 <% end %>
 ```
+
+### Converting Existing Views
+
+CCCUX includes a development tool to convert existing Rails views to use authorization helpers:
+
+```bash
+# Convert all views in a directory
+rails cccux:convert_views[app/views/products]
+rails cccux:convert_views[app/views/stores]
+
+# See conversion examples
+rails cccux:view_examples
+```
+
+**What it converts:**
+- `link_to` patterns → `link_if_can_show`, `link_if_can_edit`
+- `button_to` delete patterns → `button_if_can_destroy`  
+- "New" links → `link_if_can_create`
+- Complex nested conditionals → context-aware helpers
+- Handles nested resource routes automatically
+
+**Example conversion:**
+```erb
+<!-- BEFORE -->
+<% if @project %>
+  <%= link_to "Edit Task", edit_project_task_path(@project, @task) %>
+<% else %>
+  <%= link_to "Edit Task", edit_task_path(@task) %>
+<% end %>
+
+<!-- AFTER -->
+<%= link_if_can_edit @task, "Edit Task", @project ? edit_project_task_path(@project, @task) : edit_task_path(@task) %>
+```
+
+This conversion tool saves significant time when adding CCCUX to existing applications.
 
 ## Admin Interface
 
