@@ -1,18 +1,17 @@
-# CCCUX - Role-Based Authorization Engine
+# CCCUX - Simplified Role-Based Authorization Engine
 
-CCCUX is a Rails engine that provides comprehensive role-based authorization with CanCanCan integration, flexible permissions, ownership scoping, and a clean admin interface.
+CCCUX is a Rails engine that provides comprehensive role-based authorization with CanCanCan integration. It's designed to be **incredibly simple** - just add one line to your controllers and configure permissions through the web interface.
 
 ## Features
 
-- **UX for Creating and Managing Roles**: Intuitive web interface for role creation and permission management
-- **Role-Based Authorization**: Define roles with granular permissions
-- **CanCanCan Integration**: Seamless integration with CanCanCan authorization library
-- **Flexible Permissions**: CRUD permissions with global and contextual access types
-- **Context-Aware Authorization**: Support for route-based context scoping
-- **Nested Resource Support**: Automatic handling of nested routes with CanCanCan's `:through` option
-- **Admin Interface**: Clean, intuitive interface for role management
-- **Drag & Drop Reordering**: Visual role priority management
-- **Rails 8 Compatible**: Works with Rails 8 and Propshaft asset pipeline
+- **One-Line Controller Setup**: Just add `load_and_authorize_resource` to any controller
+- **No Model Code Required**: Models need no special concerns or methods
+- **UI-Driven Configuration**: Set up complex ownership patterns through the web interface
+- **Automatic Setup**: Configures your ApplicationController automatically
+- **CanCanCan Integration**: Built on the proven CanCanCan authorization library
+- **Flexible Ownership**: Handle simple user ownership or complex manager hierarchies
+- **Admin Interface**: Clean, intuitive interface for role and permission management
+- **Rails 8 Compatible**: Works with Rails 8 and modern Rails applications
 
 ## Quick Start
 
@@ -23,499 +22,312 @@ Add to your Gemfile:
 gem 'cccux', path: 'path/to/cccux'
 ```
 
-### 2. Run the Installer
+Run:
+```bash
+bundle install
+```
+
+### 2. Run the Setup Task
 
 ```bash
 rails cccux:setup
 ```
 
-This command will:
-1. Check if Devise is installed and guide you through installation if needed
-2. Create a "Role Manager" user account for admin access
-3. Mount the CCCUX engine in your application
-4. Set up initial database tables and seed data
+**What the setup task does:**
 
-### 4. Configure Your Application
+1. **Checks for Devise**: Verifies Devise is installed, guides you through installation if needed
+2. **Mounts the Engine**: Adds `mount Cccux::Engine => '/cccux'` to your routes
+3. **Configures ApplicationController**: Automatically adds the CCCUX authorization concern to your ApplicationController
+4. **Creates Database Tables**: Runs migrations for roles, permissions, and user assignments
+5. **Seeds Default Data**: Creates default roles (Guest, Basic User, Role Manager, Administrator)
+6. **Creates Admin User**: Sets up a "Role Manager" user account for admin access
 
-Start your server and navigate to `http://localhost:3000/cccux`:
+The setup task automatically configures your `ApplicationController` with:
+- CanCanCan integration
+- CCCUX Ability class
+- Error handling for authorization failures
+- View helpers for authorization checks
 
-1. **Model Discovery**: Click "Model Discovery" to select which models should have role-based authorization
-2. **Roles Management**: Go to "Roles" to see the default roles (Role Manager, Basic User, Guest)
-3. **Create Custom Roles**: Create new roles and assign fine-grained permissions
-4. **Permission Management**: Visit "Permissions" to add new actions for your models
+### 3. Add Authorization to Controllers
 
-**Pro Tip**: When you add new controller actions, visit the "Permissions" section, select your model, and click "Create new Permission" to make the new action available for role assignment. 
+**The only requirement: Add `load_and_authorize_resource` to your controllers**
 
-
-### 3. Set Up Your Models
-
-#### Basic Model Setup
-
-Include the authorization concern in your models:
-
+#### Basic Controller
 ```ruby
-class User < ApplicationRecord
-  include Cccux::Authorizable
-  # ... your model code
-end
-
-class Store < ApplicationRecord
-  include Cccux::Authorizable
-  # ... your model code
-end
-```
-
-#### Advanced Ownership Patterns
-
-For models with complex ownership relationships, use the `ScopedOwnership` concern:
-
-```ruby
-class Product < ApplicationRecord
-  include Cccux::ScopedOwnership
-  
-  belongs_to :user
-  belongs_to :store
-  
-  # Configure ownership patterns
-  scoped_ownership owner: :user, parent: :store, manager_through: :store_managers
-end
-
-class Order < ApplicationRecord
-  include Cccux::ScopedOwnership
-  
-  belongs_to :user
-  belongs_to :store
-  
-  # Configure ownership patterns
-  scoped_ownership owner: :user, parent: :store, manager_through: :store_managers
-end
-```
-
-### 4. Create Controllers
-
-#### Standard Controllers
-
-For host app controllers with basic authorization:
-
-```ruby
-class UsersController < Cccux::AuthorizationController
+class ProductsController < ApplicationController
   load_and_authorize_resource
   
   def index
-    @users = @users.order(:name)
+    @products = @products.order(:name)
   end
   
   def show
-    # @user is automatically loaded and authorized
+    # @product is automatically loaded and authorized
   end
 end
 ```
 
-#### Nested Resource Controllers
-
-For controllers with nested resources and context-aware authorization:
-
+#### Nested Resource Controller
 ```ruby
-class ProductsController < Cccux::AuthorizationController
-  # Load store when store_id is present (nested routes)
+class OrdersController < ApplicationController
+  # Load parent resource when present
   load_and_authorize_resource :store, if: -> { params[:store_id].present? }
-  # Load product through store for nested routes, directly for standalone routes  
-  load_and_authorize_resource :product, through: :store, if: -> { params[:store_id].present? }
-  load_and_authorize_resource :product, unless: -> { params[:store_id].present? }
-
+  
+  # Load main resource through parent or directly
+  load_and_authorize_resource :order, through: :store, if: -> { params[:store_id].present? }
+  load_and_authorize_resource :order, unless: -> { params[:store_id].present? }
+  
   def index
     if params[:store_id].present?
-      # Nested route: /stores/:store_id/products
-      @products = @store.products.order(:name)
+      @orders = @store.orders.order(:created_at)
     else
-      # Standalone route: /products
-      @products = @products.order(:name)
-    end
-  end
-
-  private
-
-  # Override current_ability to provide store context for scoped permissions
-  def current_ability
-    context = {}
-    context[:store_id] = @store.id if @store
-    @current_ability ||= Cccux::Ability.new(current_user, context)
-  end
-end
-```
-
-#### CCCUX Admin Controllers
-
-For controllers within the CCCUX admin interface:
-
-```ruby
-module Cccux
-  class RolesController < CccuxController
-    before_action :ensure_role_manager
-    
-    def index
-      # @roles is automatically loaded and authorized
-      # Uses Cccux::Role model automatically
+      @orders = @orders.order(:created_at)
     end
   end
 end
 ```
 
-### 5. Use Authorization in Views
+### 4. Configure Permissions
 
-#### Basic Authorization Helpers
+Start your server and navigate to `http://localhost:3000/cccux`:
 
-```erb
-<% if can? :read, @user %>
-  <%= link_to "View User", user_path(@user) %>
-<% end %>
+1. **Model Discovery**: Click "Model Discovery" to automatically detect your models and create permissions
+2. **Roles Management**: Go to "Roles" to see default roles and create custom ones
+3. **Assign Permissions**: Configure which roles can perform which actions on your models
 
-<% if can? :update, @store %>
-  <%= link_to "Edit Store", edit_store_path(@store) %>
-<% end %>
-```
+## Permission Configuration
 
-#### CCCUX Authorization Helpers
+CCCUX supports two access types:
 
-```erb
-<%= link_if_can_show @product, "View", product_path(@product) %>
-<%= link_if_can_edit @product, "Edit", edit_product_path(@product) %>
-<%= button_if_can_destroy @product, "Delete", product_path(@product), method: :delete %>
+### Global Access
+- **What it does**: Access to all records everywhere
+- **Use case**: Administrators, managers with broad access
+- **Configuration**: Select "Global" access type
 
-<!-- For creation links, use build to provide context -->
-<%= link_if_can_create @store.products.build, "Add New Product", new_store_product_path(@store) %>
-```
+### Owned Access
+- **What it does**: Access to records you own or have access to via relationships
+- **Use case**: Users editing their own records, managers accessing records in their scope
+- **Configuration**: Select "Owned" access type and configure ownership settings
 
-## Controller Hierarchy
+## Ownership Configuration Examples
 
-CCCUX provides three controller classes with increasing functionality:
+### Simple User Ownership
+**Scenario**: Users can only edit products they created
 
-### 1. `Cccux::ApplicationController`
-**Base controller with shared functionality:**
-- CanCanCan integration (`include CanCan::ControllerAdditions`)
-- Common error handling (`CanCan::AccessDenied`, `ActiveRecord::RecordNotFound`)
-- CCCUX Ability class integration (`current_ability`)
-- User setup (`set_current_user`)
-- Devise parameter sanitization for `first_name` and `last_name`
+- **Access Type**: Owned
+- **Ownership Model**: (leave blank)
+- **Foreign Key**: (leave blank - auto-detects `user_id`)
+- **User Key**: (leave blank - defaults to `user_id`)
 
-**Use when:** You need basic CCCUX functionality without automatic resource loading.
+### Manager Ownership
+**Scenario**: Store managers can edit all orders in stores they manage
 
-### 2. `Cccux::AuthorizationController`
-**Host app authorization controller:**
-- Inherits all functionality from `ApplicationController`
-- Uses host app layout (`layout 'application'`)
-- Automatic resource loading and authorization (`load_and_authorize_resource`)
+- **Access Type**: Owned
+- **Ownership Model**: `StoreManager`
+- **Foreign Key**: `store_id`
+- **User Key**: `user_id`
 
-**Use when:** Creating controllers in your host app that need CCCUX authorization.
+This configuration tells CCCUX: "Find all StoreManager records where user_id matches the current user, get their store_id values, and allow access to orders with those store_id values."
 
-### 3. `Cccux::CccuxController`
-**Full CCCUX admin interface controller:**
-- Inherits all functionality from `ApplicationController`
-- Dedicated admin layout (`layout 'cccux/admin'`)
-- Enhanced error handling for admin interface
-- Namespaced model handling (`resource_class` override)
-- Role Manager access control (`ensure_role_manager`)
+### Complex Hierarchies
+**Scenario**: Regional managers can edit products in all stores in their region
 
-**Use when:** Creating controllers within the CCCUX admin interface.
+- **Access Type**: Owned
+- **Ownership Model**: `RegionalManager`
+- **Foreign Key**: `region_id`
+- **User Key**: `user_id`
 
-## Model Configuration
+## Model Requirements
 
-### Basic Models
-
-For simple models with direct user ownership:
+**Models need NO special code!** CCCUX works with standard Rails models:
 
 ```ruby
-class User < ApplicationRecord
-  include Cccux::Authorizable
-  
-  # Required methods for ownership
-  def owned_by?(user)
-    return false unless user&.persisted?
-    id == user.id
-  end
-  
-  def self.scoped_for_user(user)
-    return none unless user&.persisted?
-    where(id: user.id)
-  end
+class Order < ApplicationRecord
+  belongs_to :store
+  belongs_to :user
+  # That's it! No concerns, no special methods needed
 end
-```
 
-### Models with Nested Resources
-
-For models that belong to other resources (like products belonging to stores):
-
-```ruby
 class Product < ApplicationRecord
   belongs_to :user
-  belongs_to :store
-  
-  # Implement ownership check for contextual permissions
-  def owned_by?(user)
-    return false unless user&.persisted?
-    user_id == user.id || store.store_managers.exists?(user: user)
-  end
+  # Works with simple user_id ownership
+end
+
+class Store < ApplicationRecord
+  belongs_to :created_by, class_name: 'User'
+  has_many :store_managers
+  # CCCUX handles complex ownership through configuration
 end
 ```
 
-This provides:
-- `owned_by?(user)` method that checks both direct ownership and store management
-- Automatic filtering when accessed through nested routes
-
-## Authorization Patterns
-
-### Nested Resource Authorization
-
-For controllers with nested resources, use CanCanCan's `:through` option:
-
-```ruby
-class ProductsController < Cccux::AuthorizationController
-  # Load store when store_id is present (nested routes)
-  load_and_authorize_resource :store, if: -> { params[:store_id].present? }
-  # Load product through store for nested routes, directly for standalone routes  
-  load_and_authorize_resource :product, through: :store, if: -> { params[:store_id].present? }
-  load_and_authorize_resource :product, unless: -> { params[:store_id].present? }
-
-  def index
-    if params[:store_id].present?
-      # Nested route: /stores/:store_id/products
-      @products = @store.products.order(:name)
-    else
-      # Standalone route: /products
-      # Handle case where @products might be nil due to authorization filtering
-      @products = @products&.order(:name) || Product.none
-    end
-  end
-
-  private
-
-  # Override current_ability to provide store context for contextual permissions
-  def current_ability
-    context = {}
-    context[:store_id] = @store.id if @store
-    @current_ability ||= Cccux::Ability.new(current_user, context)
-  end
-end
-```
-
-### Standard Authorization
-
-For simple controllers without nested resources:
-
-```ruby
-class UsersController < Cccux::AuthorizationController
-  load_and_authorize_resource
-  
-  def index
-    # Handle case where @users might be nil due to authorization filtering
-    @users = @users&.order(:name) || User.none
-  end
-end
-```
-
-**Important**: When using `load_and_authorize_resource`, the collection might be `nil` if the user has contextual permissions but no context is provided. Always use the safe navigation operator (`&.`) and provide a fallback (like `Model.none`) to avoid `NoMethodError`.
-
-## Role Management
-
-### Creating Roles
-
-```ruby
-# Create a basic user role
-role = Cccux::Role.create!(
-  name: 'Basic User',
-  priority: 50
-)
-
-# Add permissions with global access
-role.role_abilities.create!(
-  ability_permission: Cccux::AbilityPermission.find_by(action: 'read', subject: 'User'),
-  access_type: 'global'
-)
-
-# Create a store manager role
-role = Cccux::Role.create!(
-  name: 'Store Manager',
-  priority: 15
-)
-
-# Add permissions with contextual access
-['read', 'create', 'update', 'destroy'].each do |action|
-  role.role_abilities.create!(
-    ability_permission: Cccux::AbilityPermission.find_by(action: action, subject: 'Product'),
-    access_type: 'contextual'
-  )
-end
-```
-
-### Assigning Roles to Users
-
-```ruby
-user.add_role('Basic User')
-user.add_role('Store Manager')
-```
-
-### Checking Permissions
-
-```ruby
-user.can?(:read, User)           # => true/false
-user.can?(:update, @store)       # => true/false
-user.has_role?('Role Manager')   # => true/false
-```
-
-## Permission Access Types
-
-CCCUX supports two access types for permissions:
-
-### 1. Global Access
-- **Access**: User can access any record of this type
-- **Use case**: System administrators, global managers
-- **Example**: Role Manager can manage all roles
-
-### 2. Contextual Access
-- **Access**: User can access records within the current route context
-- **Use case**: Store managers, project members
-- **Example**: Store managers can manage products in their stores (when accessed via `/stores/:store_id/products`)
+**How it works:**
+- CCCUX automatically detects `user_id` and `creator_id` columns for simple ownership
+- Complex ownership patterns are handled through the UI configuration
+- The CCCUX Ability class dynamically queries your join tables based on your settings
 
 ## View Helpers
 
-### Basic Authorization Helpers
+Use the built-in view helpers for authorization checks:
 
 ```erb
-<%= link_if_can_show @product, "View", product_path(@product) %>
-<%= link_if_can_edit @product, "Edit", edit_product_path(@product) %>
-<%= link_if_can_create @store.products.build, "Add Product", new_store_product_path(@store) %>
-<%= button_if_can_destroy @product, "Delete", product_path(@product), method: :delete %>
-```
-
-### Content Helpers
-
-```erb
-<% content_if_can_edit @product do %>
-  <div class="admin-controls">
-    <%= link_to "Advanced Settings", advanced_product_path(@product) %>
-  </div>
-<% end %>
-```
-
-### Permission Check Helpers
-
-```erb
-<% if can_edit?(@product) %>
-  <%= link_to "Edit", edit_product_path(@product) %>
+<% if can? :read, @product %>
+  <%= link_to "View Product", product_path(@product) %>
 <% end %>
 
-<% if can_create?(Product) %>
+<% if can? :update, @product %>
+  <%= link_to "Edit Product", edit_product_path(@product) %>
+<% end %>
+
+<% if can? :create, Product %>
   <%= link_to "New Product", new_product_path %>
 <% end %>
+
+<% if can? :destroy, @product %>
+  <%= link_to "Delete", product_path(@product), method: :delete, 
+              confirm: "Are you sure?" %>
+<% end %>
 ```
+
+## Admin Interface
+
+Navigate to `/cccux` to access the admin interface:
+
+- **Dashboard**: Overview of roles, users, and permissions
+- **Roles**: Create and manage roles with drag-and-drop priority ordering
+- **Permissions**: View and create permissions for your models
+- **Users**: Assign roles to users
+- **Model Discovery**: Automatically detect new models and create permissions
 
 ## Error Handling
 
-CCCUX controllers automatically handle common errors:
+CCCUX automatically handles authorization errors:
 
-### Authorization Errors
-- `CanCan::AccessDenied` → Redirects to root with "Access denied" message
-- Admin controllers show "Only Role Managers can access the admin interface"
-
-### Not Found Errors
-- `ActiveRecord::RecordNotFound` → Redirects to root with "Resource not found" message
-
-### Admin-Specific Errors
-- `ActionController::RoutingError` → Redirects to root with "Page not found" message
-- `ActionController::ParameterMissing` → Redirects to root with "Invalid parameters" message
-
-## Asset Pipeline
-
-CCCUX includes CSS and JavaScript assets for the admin interface:
-
-```ruby
-# In your application.css
-@import "cccux/admin";
-
-# In your application.js
-import "cccux/admin"
-```
+- **Access Denied**: Redirects to root path with appropriate error message
+- **Record Not Found**: Handles missing records gracefully
+- **Admin Access**: Restricts admin interface to Role Managers only
 
 ## Testing
 
-### Testing Authorization
+Test your authorization with standard Rails testing:
 
 ```ruby
-# In your tests
-require 'test_helper'
-
 class ProductsControllerTest < ActionDispatch::IntegrationTest
   setup do
     @user = users(:one)
-    @store = stores(:one)
     @product = products(:one)
     sign_in @user
   end
 
   test "should get index when authorized" do
-    @user.add_role('Store Manager')
-    get store_products_url(@store)
+    @user.add_role('Basic User')
+    get products_url
     assert_response :success
   end
 
-  test "should not get index when not authorized" do
-    get store_products_url(@store)
+  test "should deny access when not authorized" do
+    get products_url
     assert_redirected_to root_path
   end
 end
 ```
 
-### Testing Model Scopes
+## Advanced Usage
+
+### Custom Ability Logic
+
+If you need custom authorization logic, you can override the `current_ability` method in your controller:
 
 ```ruby
-class ProductTest < ActiveSupport::TestCase
-  setup do
-    @user = users(:one)
-    @store = stores(:one)
-    @product = products(:one)
-  end
-
-  test "owned_by? returns true for owner" do
-    assert @product.owned_by?(@product.user)
-  end
-
-  test "owned_by? returns true for store manager" do
-    @store.store_managers.create!(user: @user)
-    assert @product.owned_by?(@user)
-  end
-
-  test "scoped_for_user includes owned products" do
-    products = Product.scoped_for_user(@product.user)
-    assert_includes products, @product
+class ProductsController < ApplicationController
+  load_and_authorize_resource
+  
+  private
+  
+  def current_ability
+    # Add custom context for complex scenarios
+    context = {}
+    context[:store_id] = params[:store_id] if params[:store_id]
+    @current_ability ||= Cccux::Ability.new(current_user, context)
   end
 end
 ```
 
-## Migration Guide
+### Multiple Role Assignment
 
-### From Basic CanCanCan
+Users can have multiple roles, and permissions are cumulative:
 
-1. **Replace Ability class** with CCCUX role-based permissions
-2. **Update controllers** to inherit from `Cccux::AuthorizationController`
-3. **Add models** to include `Cccux::Authorizable` or `Cccux::ScopedOwnership`
-4. **Create roles** in the admin interface
-5. **Assign roles** to users
+```ruby
+user.add_role('Basic User')
+user.add_role('Store Manager')
+user.roles # => ['Basic User', 'Store Manager']
+```
 
-### From Custom Authorization
+### Checking Roles in Code
 
-1. **Identify permission patterns** in your custom code
-2. **Create corresponding roles** with appropriate permissions
-3. **Replace custom authorization checks** with CCCUX helpers
-4. **Test thoroughly** to ensure equivalent functionality
+```ruby
+current_user.has_role?('Role Manager')  # => true/false
+current_user.roles                      # => ['Basic User', 'Store Manager']
+```
+
+## Setup Task Details
+
+The `rails cccux:setup` task performs these steps:
+
+1. **Devise Check**: Ensures Devise is installed and configured
+2. **Route Mounting**: Adds CCCUX routes to your application
+3. **ApplicationController Configuration**: Automatically adds the CCCUX concern
+4. **Database Setup**: Creates all necessary tables and indexes
+5. **Default Data**: Seeds roles, permissions, and creates admin user
+6. **Status Verification**: Confirms all components are properly configured
+
+The setup task is idempotent - you can run it multiple times safely.
+
+## Why CCCUX is Simple
+
+Traditional authorization solutions require:
+- Complex model concerns and methods
+- Manual ability class configuration
+- Custom ownership logic in every model
+- Lots of boilerplate code
+
+**CCCUX eliminates all of this:**
+- ✅ One line per controller: `load_and_authorize_resource`
+- ✅ No model code required
+- ✅ UI-driven configuration
+- ✅ Automatic setup and integration
+- ✅ Works with standard Rails patterns
+
+## Troubleshooting
+
+### Common Issues
+
+**"Access denied" for everything:**
+- Check that your models have been discovered (visit `/cccux/permissions`)
+- Verify user has appropriate roles assigned
+- Ensure permissions are configured for the role
+
+**Controllers not authorizing:**
+- Make sure `load_and_authorize_resource` is added to the controller
+- Check that the setup task configured your ApplicationController
+
+**Complex ownership not working:**
+- Verify ownership model, foreign key, and user key are correct
+- Check that the join table exists and has the expected columns
+- Test the ownership configuration in the Rails console
+
+### Getting Help
+
+1. Check the `/cccux/status` page for configuration issues
+2. Review the Rails logs for authorization errors
+3. Use the Rails console to test permissions: `current_user.can?(:read, Product)`
 
 ## Contributing
 
 1. Fork the repository
 2. Create a feature branch
-3. Make your changes
-4. Add tests
-5. Submit a pull request
+3. Make your changes with tests
+4. Submit a pull request
 
 ## License
 
-This project is licensed under the MIT License - see the LICENSE file for details.
+This project is licensed under the MIT License.

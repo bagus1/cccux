@@ -67,6 +67,11 @@ namespace :cccux do
     include_cccux_concern
     puts "✅ CCCUX concern added to User model"
     
+    # Step 5.5: Configure ApplicationController with CCCUX
+    puts "📋 Step 5.5: Configuring ApplicationController with CCCUX..."
+    configure_application_controller
+    puts "✅ ApplicationController configured with CCCUX"
+    
     # Step 6: Create initial roles and permissions
     puts "📋 Step 6: Creating initial roles and permissions..."
     create_default_roles_and_permissions
@@ -143,6 +148,17 @@ namespace :cccux do
       puts "User Model:  #{cccux_included && devise_configured ? '✅ Configured' : '❌ Not configured'}"
     else
       puts "User Model:  ❌ Not found"
+    end
+    
+    # Check ApplicationController
+    app_controller_path = Rails.root.join('app', 'controllers', 'application_controller.rb')
+    if File.exist?(app_controller_path)
+      app_controller_content = File.read(app_controller_path)
+      cccux_configured = app_controller_content.include?('Cccux::ApplicationControllerConcern') ||
+                        app_controller_content.include?('include CanCan::ControllerAdditions')
+      puts "Controller:  #{cccux_configured ? '✅ CCCUX authorization configured' : '❌ Not configured'}"
+    else
+      puts "Controller:  ❌ ApplicationController not found"
     end
     
     # Check database
@@ -273,6 +289,34 @@ namespace :cccux do
     else
       puts "   ℹ️  User model already includes Cccux::UserConcern"
     end
+  end
+
+  def configure_application_controller
+    application_controller_path = Rails.root.join('app', 'controllers', 'application_controller.rb')
+    application_controller_content = File.read(application_controller_path)
+
+    # Check if CCCUX is already configured
+    if application_controller_content.include?('Cccux::ApplicationControllerConcern') ||
+       application_controller_content.include?('include CanCan::ControllerAdditions')
+      puts "   ℹ️  ApplicationController already includes CCCUX authorization"
+      return
+    end
+
+    # Find the class definition line
+    class_line_pattern = /class ApplicationController < ActionController::Base/
+    unless application_controller_content.match(class_line_pattern)
+      puts "   ⚠️  Could not find ApplicationController class definition"
+      return
+    end
+
+    # Add CCCUX concern include
+    updated_content = application_controller_content.gsub(
+      class_line_pattern,
+      "class ApplicationController < ActionController::Base\n  include Cccux::ApplicationControllerConcern"
+    )
+    
+    File.write(application_controller_path, updated_content)
+    puts "   ✅ Added CCCUX authorization to ApplicationController"
   end
 
   def create_default_roles_and_permissions

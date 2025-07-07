@@ -75,7 +75,9 @@ module Cccux
         when 'owned'
           apply_owned_ability(action, model_class, user, role_ability)
         else
-          can action, model_class
+          # Default: deny access if access_type is not recognized
+          Rails.logger.warn "CCCUX: Unknown access_type '#{role_ability.access_type}' for #{model_class.name}, denying access"
+          # Don't grant any permissions - CanCanCan denies by default
         end
       end
     end
@@ -117,8 +119,9 @@ module Cccux
       elsif model_class.column_names.include?('creator_id')
         can action, model_class, creator_id: user.id
       else
-        Rails.logger.warn "CCCUX: No ownership pattern found for #{model_class.name}, granting access to all records"
-        can action, model_class
+        # Default: deny access when no ownership pattern is found
+        Rails.logger.warn "CCCUX: No ownership pattern found for #{model_class.name}, denying access"
+        # Don't grant any permissions - CanCanCan denies by default
       end
     end
 
