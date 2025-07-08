@@ -33,5 +33,4 @@ Gem::Specification.new do |spec|
   
   # Development dependencies with proper version constraints
   spec.add_development_dependency "sqlite3", "~> 1.4"
-  spec.add_development_dependency "rspec-rails", "~> 6.0"
 end

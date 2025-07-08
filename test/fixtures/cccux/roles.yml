@@ -1,0 +1,14 @@
+admin:
+  name: "Admin"
+
+manager:
+  name: "Manager"
+
+user:
+  name: "User"
+
+editor:
+  name: "Editor"
+
+moderator:
+  name: "Moderator"

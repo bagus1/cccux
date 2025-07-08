@@ -1,0 +1,15 @@
+admin:
+  name: "Admin User"
+  email: "admin@example.com"
+
+manager:
+  name: "Manager User"
+  email: "manager@example.com"
+
+user:
+  name: "Regular User"
+  email: "user@example.com"
+
+guest:
+  name: "Guest User"
+  email: "guest@example.com"

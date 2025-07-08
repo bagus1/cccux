@@ -5,6 +5,29 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.1] - 2025-07-07
+
+### Added
+- **Comprehensive Test Suite**: Added extensive test coverage for all major components
+  - Model tests for User, Role, RoleAbility with validations and associations
+  - Ability class tests covering all authorization scenarios
+  - Controller tests for admin interface functionality  
+  - View helper tests for authorization-aware UI components
+  - Integration tests for complete authorization workflows
+  - Rake task tests for setup and configuration automation
+- **Test Fixtures**: Created comprehensive test data fixtures for users and roles
+- **Test Documentation**: Detailed test scenarios covering edge cases and security
+
+### Fixed
+- **Rails Version Compatibility**: Fixed schema version compatibility with Rails 7.2
+- **Dependency Constraints**: Removed incompatible RSpec dependency, using built-in Rails testing
+
+### Technical Improvements
+- **Security Testing**: Tests verify deny-by-default security model
+- **Ownership Testing**: Comprehensive tests for both direct and contextual ownership
+- **Multi-role Testing**: Tests verify cumulative permissions from multiple roles
+- **Guest User Testing**: Ensures proper handling of unauthenticated users
+
 ## [0.1.0] - 2025-07-07
 
 ### Added
@@ -64,4 +87,5 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Backward compatibility maintained during transition period
 - Clear upgrade path for existing installations
 
+[0.1.1]: https://github.com/bagus1/cccux/releases/tag/v0.1.1
 [0.1.0]: https://github.com/bagus1/cccux/releases/tag/v0.1.0 
