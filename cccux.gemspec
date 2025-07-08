@@ -17,10 +17,10 @@ Gem::Specification.new do |spec|
   # spec.metadata["allowed_push_host"] = "TODO: Set to 'http://mygemserver.com'"
 
   spec.metadata["homepage_uri"] = spec.homepage
-  spec.metadata["source_code_uri"] = "https://github.com/yourusername/cccux"  # Update with your GitHub username
-  spec.metadata["changelog_uri"] = "https://github.com/yourusername/cccux/blob/main/CHANGELOG.md"  # Update with your GitHub username
-  spec.metadata["documentation_uri"] = "https://github.com/yourusername/cccux/blob/main/README.md"  # Update with your GitHub username
-  spec.metadata["bug_tracker_uri"] = "https://github.com/yourusername/cccux/issues"  # Update with your GitHub username
+  spec.metadata["source_code_uri"] = "https://github.com/bagus1/cccux"
+  spec.metadata["changelog_uri"] = "https://github.com/bagus1/cccux/blob/main/CHANGELOG.md"
+  spec.metadata["documentation_uri"] = "https://github.com/bagus1/cccux/blob/main/README.md"
+  spec.metadata["bug_tracker_uri"] = "https://github.com/bagus1/cccux/issues"
 
   spec.files = Dir.chdir(File.expand_path(__dir__)) do
     Dir["{app,config,db,lib}/**/*", "MIT-LICENSE", "Rakefile", "README.md", "CHANGELOG.md"]

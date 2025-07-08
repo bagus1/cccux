@@ -64,4 +64,4 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Backward compatibility maintained during transition period
 - Clear upgrade path for existing installations
 
-[0.1.0]: https://github.com/yourusername/cccux/releases/tag/v0.1.0 
+[0.1.0]: https://github.com/bagus1/cccux/releases/tag/v0.1.0 
