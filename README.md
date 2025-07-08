@@ -4,6 +4,8 @@ CCCUX is a Rails engine that provides comprehensive role-based authorization wit
 
 ## Features
 
+CCCUX eliminates the complexity of traditional authorization solutions by providing:
+
 - **One-Line Controller Setup**: Just add `load_and_authorize_resource` to any controller
 - **No Model Code Required**: Models need no special concerns or methods
 - **UI-Driven Configuration**: Set up complex ownership patterns through the web interface
@@ -12,6 +14,21 @@ CCCUX is a Rails engine that provides comprehensive role-based authorization wit
 - **Flexible Ownership**: Handle simple user ownership or complex manager hierarchies
 - **Admin Interface**: Clean, intuitive interface for role and permission management
 - **Rails 8 Compatible**: Works with Rails 8 and modern Rails applications
+
+### Why CCCUX is Simple
+
+Traditional authorization solutions require:
+- Complex model concerns and methods
+- Manual ability class configuration
+- Custom ownership logic in every model
+- Lots of boilerplate code
+
+**CCCUX eliminates all of this:**
+- ✅ One line per controller: `load_and_authorize_resource`
+- ✅ No model code required
+- ✅ UI-driven configuration
+- ✅ Automatic setup and integration
+- ✅ Works with standard Rails patterns
 
 ## Quick Start
 
@@ -33,6 +50,10 @@ bundle install
 rails cccux:setup
 ```
 
+#### Setup Task Details
+
+The `rails cccux:setup` task performs these steps:
+
 **What the setup task does:**
 
 1. **Checks for Devise**: Verifies Devise is installed, guides you through installation if needed
@@ -48,11 +69,20 @@ The setup task automatically configures your `ApplicationController` with:
 - Error handling for authorization failures
 - View helpers for authorization checks
 
-### 3. Add Authorization to Controllers
+The setup task is idempotent - you can run it multiple times safely.
+
+### 3. Managing Permissions and Roles
+
+Start your server, login as the Role Manager user you created and navigate to `http://localhost:3000/cccux`. You should see links in the footer on your homepage.
+
+## Controller Configuration
+
+Controllers need minimal configuration to work with CCCUX - just add `load_and_authorize_resource` to any controller.
+
+### Basic Controller Setup
 
 **The only requirement: Add `load_and_authorize_resource` to your controllers**
 
-#### Basic Controller
 ```ruby
 class ProductsController < ApplicationController
   load_and_authorize_resource
@@ -67,7 +97,10 @@ class ProductsController < ApplicationController
 end
 ```
 
-#### Nested Resource Controller
+### Nested Resource Setup
+
+For controllers handling nested resources, use conditional loading:
+
 ```ruby
 class OrdersController < ApplicationController
   # Load parent resource when present
@@ -87,74 +120,14 @@ class OrdersController < ApplicationController
 end
 ```
 
-### 4. Managing Permissions and Roles
+### Checking Roles in Code
 
-Start your server, login as the Role Manager user you created and navigate to `http://localhost:3000/cccux`. You should see links in the footer on your homepage.
+```ruby
+current_user.has_role?('Role Manager')  # => true/false
+current_user.roles                      # => ['Basic User', 'Store Manager']
+```
 
-## Permission Configuration
-
-1. **Model Discovery**: Click "Model Discovery" to automatically detect your models and create permissions
-2. **CRUD Actions added by default**: The Model Discovery process will add permissions for Read, Create, Update and Delete. 
-3. **Additional Actions**: The Permissions page shows each model and all their permisssions. Click the "Create New xxx Permission" for a model and it will discover any additional actions that your controller and routes support. Add them and they'll be available for any role. 
-
-## Role Creation
-
-
-Once you've created all the permissions from the Model Discovery page, you can assign them to Roles. By default, CCCUX creates three roles. Guest, Basic User and Role Manager. For additional Roles, click the Create Role button and fill out the simple form. Once it's created, edit it to configure its abilities. 
-
- CCCUX supports two access types for each Crud Action. Global and Owned. 
-
-
-### Global Access
-- **What it does**: Access to the to all records for a model for the individual action. 
-- **Use case**: Allowing Read access to the role for all items in a model.
-- **Use case**: Allowing Create access to create an item in a model.
-- **Configuration**: Select "Global" access type
-
-### Owned Access
-
-There are two types of Owned Access. When you click 'owned' for a permission (Update) for a model (Product) for a role ("Basic User"), by default, any user with that role will be able only update records they created. However additional fields will be displayed for 'Owned' role permissions. These allow you to allow access to a manager (Project Manager) if you have an appropriate model and relationships set up in your application. This is best used for nested routes (see the setup for nested routes above) so that for instance a Project Manager can manage all the Tasks in a Project. 
-
-#### Basic Owned Access
-
-- **By Default**: Access to records for the user that created them.
-- **Use case**: Users editing their own records
-
-#### Advanced Owned Access
-
-- **First** select 'Owned' for a permission on a model for a role. 
-- **Next** Select an Ownership Model (ProjectManager), and enter a foreign key (project_id) and a User Key (user_id)
-- **Result**: Now if managers (Project Managers) are assigned to the parent item (A Project), they can manage all the items (Tasks) within (their Project).
-
-## Ownership Configuration Examples
-
-### Simple User Ownership
-**Scenario**: Users can only edit products they created
-
-- **Access Type**: Owned
-- **Ownership Model**: (leave blank)
-- **Foreign Key**: (leave blank - auto-detects `user_id`)
-- **User Key**: (leave blank - defaults to `user_id`)
-
-### Manager Ownership
-**Scenario**: Store managers can edit all orders in stores they manage
-
-- **Access Type**: Owned
-- **Ownership Model**: `ProjectManager`
-- **Foreign Key**: `project_id`
-- **User Key**: `user_id`
-
-This configuration tells CCCUX: "Find all ProjectManager records where user_id matches the current user, get their project_id values, and allow access to tasks with those project_id values."
-
-### Complex Hierarchies
-**Scenario**: Regional managers can edit products in all stores in their region
-
-- **Access Type**: Owned
-- **Ownership Model**: `RegionalManager`
-- **Foreign Key**: `region_id`
-- **User Key**: `user_id`
-
-## Model Requirements
+## Models
 
 **Models need NO special code!** CCCUX works with standard Rails models:
 
@@ -177,10 +150,60 @@ class Store < ApplicationRecord
 end
 ```
 
-**How it works:**
-- CCCUX automatically detects `user_id` and `creator_id` columns for simple ownership
-- Complex ownership patterns are handled through the UI configuration
-- The CCCUX Ability class dynamically queries your join tables based on your settings
+## Admin Interface
+
+Navigate to `/cccux` to access the admin interface:
+
+- **Dashboard**: Overview of roles, users, and permissions
+- **Roles**: Create and manage roles with drag-and-drop priority ordering
+- **Permissions**: View and create permissions for your models
+- **Users**: Assign roles to users
+- **Model Discovery**: Automatically detect new models and create permissions
+
+## Managing Permissions and Roles
+
+### Permission Configuration
+
+1. **Model Discovery**: Click "Model Discovery" to automatically detect your models and create permissions
+2. **CRUD Actions added by default**: The Model Discovery process will add permissions for Read, Create, Update and Delete. 
+3. **Additional Actions**: The Permissions page shows each model and all their permisssions. Click the "Create New xxx Permission" for a model and it will discover any additional actions that your controller and routes support. Add them and they'll be available for any role. 
+
+### Role Creation
+
+Once you've created all the permissions from the Model Discovery page, you can assign them to Roles. By default, CCCUX creates three roles. Guest, Basic User and Role Manager. For additional Roles, click the Create Role button and fill out the simple form. Once it's created, edit it to configure its abilities. 
+
+Click to edit a role to configure it.
+
+### Role Configuration
+
+CCCUX supports two access types for each action for each model. Global and Owned.
+
+#### Global Access
+- **What it does**: Access to the to all records for a model for the individual action. 
+- **Use case**: Allowing Read access to the role for all items in a model.
+- **Use case**: Allowing Create access to create an item in a model.
+- **Configuration**: Select "Global" access type
+
+#### Owned Access
+
+There are two types of Owned Access. When you click 'owned' for a permission (Update) for a model (Product) for a role ("Basic User"), by default, any user with that role will be able only update records they created. However additional fields will be displayed for 'Owned' role permissions. These allow you to allow access to a manager (Project Manager) if you have an appropriate model (ProjectManager) and relationships set up in your application. This is best used for nested routes (see the setup for nested routes above) so that for instance a Project Manager can manage all the Tasks in a Project. 
+
+##### Basic Owned Access
+
+- **By Default**: Access to records for the user that created them.
+- **Use case**: Users editing their own records
+
+##### Advanced Owned Access
+
+- **First** select 'Owned' for a permission on a model for a role. 
+- **Next** Select an Ownership Model (ProjectManager), and enter a foreign key (project_id) and a User Key (user_id)
+- **Result**: Now if managers (Project Managers) are assigned to the parent item (A Project), they can manage all the items (Tasks) within (their Project).
+
+### Role Assignment
+
+From the cccux dashboard, click users to see a list of users. Click to edit an individual user to add them to a role. Users can be assgined to multiple roles.
+
+
 
 ## View Helpers
 
@@ -219,7 +242,7 @@ You can also use standard CanCanCan patterns:
 <% end %>
 ```
 
-### Converting Existing Views
+## Converting Existing Views
 
 CCCUX includes a development tool to convert existing Rails views to use authorization helpers:
 
@@ -254,16 +277,6 @@ rails cccux:view_examples
 
 This conversion tool saves significant time when adding CCCUX to existing applications.
 
-## Admin Interface
-
-Navigate to `/cccux` to access the admin interface:
-
-- **Dashboard**: Overview of roles, users, and permissions
-- **Roles**: Create and manage roles with drag-and-drop priority ordering
-- **Permissions**: View and create permissions for your models
-- **Users**: Assign roles to users
-- **Model Discovery**: Automatically detect new models and create permissions
-
 ## Error Handling
 
 CCCUX automatically handles authorization errors:
@@ -273,6 +286,8 @@ CCCUX automatically handles authorization errors:
 - **Admin Access**: Restricts admin interface to Role Managers only
 
 ## Testing
+
+### Basic Authorization Testing
 
 Test your authorization with standard Rails testing:
 
@@ -297,6 +312,31 @@ class ProductsControllerTest < ActionDispatch::IntegrationTest
 end
 ```
 
+### Comprehensive Test Suite
+
+CCCUX includes a comprehensive test suite covering:
+
+- **Model Tests**: User, Role, RoleAbility, and Ability model functionality
+- **Controller Tests**: User authorization and admin interface access
+- **Helper Tests**: Authorization helper methods and view helpers
+- **Integration Tests**: Complete authorization flow testing
+- **Task Tests**: Setup task functionality and configuration
+- **Fixture Tests**: Proper test data setup for users and roles
+
+Run the tests with:
+```bash
+cd path/to/cccux
+rails test
+```
+
+The test suite validates:
+- Role assignment and permission checking
+- Ownership-based access control
+- Admin interface restrictions
+- Database setup and seeding
+- View helper functionality
+- Error handling scenarios
+
 ## Advanced Usage
 
 ### Custom Ability Logic
@@ -317,51 +357,6 @@ class ProductsController < ApplicationController
   end
 end
 ```
-
-### Multiple Role Assignment
-
-Users can have multiple roles, and permissions are cumulative:
-
-```ruby
-user.add_role('Basic User')
-user.add_role('Store Manager')
-user.roles # => ['Basic User', 'Store Manager']
-```
-
-### Checking Roles in Code
-
-```ruby
-current_user.has_role?('Role Manager')  # => true/false
-current_user.roles                      # => ['Basic User', 'Store Manager']
-```
-
-## Setup Task Details
-
-The `rails cccux:setup` task performs these steps:
-
-1. **Devise Check**: Ensures Devise is installed and configured
-2. **Route Mounting**: Adds CCCUX routes to your application
-3. **ApplicationController Configuration**: Automatically adds the CCCUX concern
-4. **Database Setup**: Creates all necessary tables and indexes
-5. **Default Data**: Seeds roles, permissions, and creates admin user
-6. **Status Verification**: Confirms all components are properly configured
-
-The setup task is idempotent - you can run it multiple times safely.
-
-## Why CCCUX is Simple
-
-Traditional authorization solutions require:
-- Complex model concerns and methods
-- Manual ability class configuration
-- Custom ownership logic in every model
-- Lots of boilerplate code
-
-**CCCUX eliminates all of this:**
-- ✅ One line per controller: `load_and_authorize_resource`
-- ✅ No model code required
-- ✅ UI-driven configuration
-- ✅ Automatic setup and integration
-- ✅ Works with standard Rails patterns
 
 ## Troubleshooting
 
