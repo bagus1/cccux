@@ -87,27 +87,44 @@ class OrdersController < ApplicationController
 end
 ```
 
-### 4. Configure Permissions
+### 4. Managing Permissions and Roles
 
-Start your server and navigate to `http://localhost:3000/cccux`:
-
-1. **Model Discovery**: Click "Model Discovery" to automatically detect your models and create permissions
-2. **Roles Management**: Go to "Roles" to see default roles and create custom ones
-3. **Assign Permissions**: Configure which roles can perform which actions on your models
+Start your server, login as the Role Manager user you created and navigate to `http://localhost:3000/cccux`. You should see links in the footer on your homepage.
 
 ## Permission Configuration
 
-CCCUX supports two access types:
+1. **Model Discovery**: Click "Model Discovery" to automatically detect your models and create permissions
+2. **CRUD Actions added by default**: The Model Discovery process will add permissions for Read, Create, Update and Delete. 
+3. **Additional Actions**: The Permissions page shows each model and all their permisssions. Click the "Create New xxx Permission" for a model and it will discover any additional actions that your controller and routes support. Add them and they'll be available for any role. 
+
+## Role Creation
+
+
+Once you've created all the permissions from the Model Discovery page, you can assign them to Roles. By default, CCCUX creates three roles. Guest, Basic User and Role Manager. For additional Roles, click the Create Role button and fill out the simple form. Once it's created, edit it to configure its abilities. 
+
+ CCCUX supports two access types for each Crud Action. Global and Owned. 
+
 
 ### Global Access
-- **What it does**: Access to all records everywhere
-- **Use case**: Administrators, managers with broad access
+- **What it does**: Access to the to all records for a model for the individual action. 
+- **Use case**: Allowing Read access to the role for all items in a model.
+- **Use case**: Allowing Create access to create an item in a model.
 - **Configuration**: Select "Global" access type
 
 ### Owned Access
-- **What it does**: Access to records you own or have access to via relationships
-- **Use case**: Users editing their own records, managers accessing records in their scope
-- **Configuration**: Select "Owned" access type and configure ownership settings
+
+There are two types of Owned Access. When you click 'owned' for a permission (Update) for a model (Product) for a role ("Basic User"), by default, any user with that role will be able only update records they created. However additional fields will be displayed for 'Owned' role permissions. These allow you to allow access to a manager (Project Manager) if you have an appropriate model and relationships set up in your application. This is best used for nested routes (see the setup for nested routes above) so that for instance a Project Manager can manage all the Tasks in a Project. 
+
+#### Basic Owned Access
+
+- **By Default**: Access to records for the user that created them.
+- **Use case**: Users editing their own records
+
+#### Advanced Owned Access
+
+- **First** select 'Owned' for a permission on a model for a role. 
+- **Next** Select an Ownership Model (ProjectManager), and enter a foreign key (project_id) and a User Key (user_id)
+- **Result**: Now if managers (Project Managers) are assigned to the parent item (A Project), they can manage all the items (Tasks) within (their Project).
 
 ## Ownership Configuration Examples
 
@@ -123,11 +140,11 @@ CCCUX supports two access types:
 **Scenario**: Store managers can edit all orders in stores they manage
 
 - **Access Type**: Owned
-- **Ownership Model**: `StoreManager`
-- **Foreign Key**: `store_id`
+- **Ownership Model**: `ProjectManager`
+- **Foreign Key**: `project_id`
 - **User Key**: `user_id`
 
-This configuration tells CCCUX: "Find all StoreManager records where user_id matches the current user, get their store_id values, and allow access to orders with those store_id values."
+This configuration tells CCCUX: "Find all ProjectManager records where user_id matches the current user, get their project_id values, and allow access to tasks with those project_id values."
 
 ### Complex Hierarchies
 **Scenario**: Regional managers can edit products in all stores in their region
