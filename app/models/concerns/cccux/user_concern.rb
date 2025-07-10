@@ -44,7 +44,9 @@ module Cccux
         return false unless role
       end
       
-      Cccux::UserRole.find_or_create_by(user: self, role: role)
+      user_role = Cccux::UserRole.find_or_create_by(user: self, role: role)
+      user_role.update!(active: true)
+      user_role
     end
 
     def remove_role(role)
@@ -59,7 +61,7 @@ module Cccux
     end
 
     def role_names
-      cccux_roles.active.pluck(:name)
+      cccux_user_roles.active.joins(:role).pluck('cccux_roles.name')
     end
 
     def highest_priority_role

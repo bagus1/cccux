@@ -2,7 +2,11 @@ Cccux::Engine.routes.draw do
   # Devise authentication routes - use different path to avoid conflicts
   # devise_for :users, class_name: 'Cccux::User', path: 'auth'
   
+  # Root route for the engine - goes to dashboard
   root 'dashboard#index'
+  
+  # Dashboard route (alias for root)
+  get '/dashboard', to: 'dashboard#index', as: :dashboard
   get '/test', to: 'simple#index'
   
   # Model Discovery Routes
@@ -22,6 +26,7 @@ Cccux::Engine.routes.draw do
     end
     
     resources :roles do
+      resources :role_abilities, only: [:index, :create, :destroy]
       member do
         patch :toggle_active
         get :permissions
@@ -52,11 +57,7 @@ Cccux::Engine.routes.draw do
       end
     end
     
-    resources :role_abilities, only: [:index, :create, :destroy] do
-      collection do
-        get :search
-      end
-    end
+
     
     # Catch-all route for any unmatched paths in CCCUX - redirect to home
     match '*unmatched', to: 'dashboard#not_found', via: :all

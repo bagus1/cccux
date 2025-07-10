@@ -2,10 +2,11 @@ class Cccux::UsersController < Cccux::CccuxController
   # Ensure only Role Managers can access user management
   before_action :ensure_role_manager
   
-  before_action :set_user, only: [:show, :edit, :update, :destroy]
+  # Remove manual set_user - let load_and_authorize_resource handle it
+  # before_action :set_user, only: [:show, :edit, :update, :destroy]
   
   def index
-    @users = User.includes(:cccux_roles).order(:email)
+    # Do not override @users, let load_and_authorize_resource scope it
     @roles = Cccux::Role.active.order(:name)
   end
   
@@ -102,11 +103,12 @@ class Cccux::UsersController < Cccux::CccuxController
   
   private
   
-  def set_user
-    @user = User.find(params[:id])
-  end
+  # Remove set_user method - load_and_authorize_resource handles this
+  # def set_user
+  #   @user = User.find(params[:id])
+  # end
   
   def user_params
-    params.require(:user).permit(:email, :password, :password_confirmation)
+    params.require(:user).permit(:email, :password, :password_confirmation, :first_name, :last_name)
   end
 end 

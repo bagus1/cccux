@@ -2,66 +2,72 @@ module Cccux
   module AuthorizationHelper
     # Link helpers for common actions
     def link_if_can_index(subject, text, path, **opts)
-      link_to(text, path, **opts) if can?(:index, subject)
+      can?(:index, subject) ? link_to(text, path, **opts) : ""
     end
 
     def link_if_can_show(subject, text, path, **opts)
-      link_to(text, path, **opts) if can?(:show, subject)
+      if can?(:show, subject)
+        link_to(text, path, **opts)
+      elsif opts.delete(:show_text)
+        text
+      else
+        ""
+      end
     end
 
     def link_if_can_create(subject, text, path, **opts)
-      link_to(text, path, **opts) if can?(:create, subject)
+      can?(:create, subject) ? link_to(text, path, **opts) : ""
     end
 
     def link_if_can_edit(subject, text, path, **opts)
-      link_to(text, path, **opts) if can?(:edit, subject)
+      can?(:edit, subject) ? link_to(text, path, **opts) : ""
     end
 
     def link_if_can_update(subject, text, path, **opts)
-      link_to(text, path, **opts) if can?(:update, subject)
+      can?(:update, subject) ? link_to(text, path, **opts) : ""
     end
 
     def link_if_can_destroy(subject, text, path, **opts)
-      link_to(text, path, **opts) if can?(:destroy, subject)
+      can?(:destroy, subject) ? link_to(text, path, **opts) : ""
     end
 
     # Button helpers for common actions
     def button_if_can_index(subject, text, path, **opts)
-      button_to(text, path, **opts) if can?(:index, subject)
+      can?(:index, subject) ? button_to(text, path, **opts) : ""
     end
 
     def button_if_can_show(subject, text, path, **opts)
-      button_to(text, path, **opts) if can?(:show, subject)
+      can?(:show, subject) ? button_to(text, path, **opts) : ""
     end
 
     def button_if_can_create(subject, text, path, **opts)
-      button_to(text, path, **opts) if can?(:create, subject)
+      can?(:create, subject) ? button_to(text, path, **opts) : ""
     end
 
     def button_if_can_edit(subject, text, path, **opts)
-      button_to(text, path, **opts) if can?(:edit, subject)
+      can?(:edit, subject) ? button_to(text, path, **opts) : ""
     end
 
     def button_if_can_update(subject, text, path, **opts)
-      button_to(text, path, **opts) if can?(:update, subject)
+      can?(:update, subject) ? button_to(text, path, **opts) : ""
     end
 
     def button_if_can_destroy(subject, text, path, **opts)
-      button_to(text, path, **opts) if can?(:destroy, subject)
+      can?(:destroy, subject) ? button_to(text, path, **opts) : ""
     end
 
     # Generic action helpers
     def link_if_can(action, subject, text, path, **opts)
-      link_to(text, path, **opts) if can?(action, subject)
+      can?(action, subject) ? link_to(text, path, **opts) : ""
     end
 
     def button_if_can(action, subject, text, path, **opts)
-      button_to(text, path, **opts) if can?(action, subject)
+      can?(action, subject) ? button_to(text, path, **opts) : ""
     end
 
     # Content helpers for conditional rendering
     def content_if_can(action, subject, &block)
-      capture(&block) if can?(action, subject)
+      can?(action, subject) ? capture(&block) : ""
     end
 
     def content_if_can_index(subject, &block)
@@ -90,15 +96,11 @@ module Cccux
 
     # Icon helpers (useful for action buttons)
     def icon_link_if_can(action, subject, icon_class, text, path, **opts)
-      link_to(path, **opts) do
-        content_tag(:i, '', class: icon_class) + ' ' + text
-      end if can?(action, subject)
+      can?(action, subject) ? link_to(path, **opts) { content_tag(:i, '', class: icon_class) + ' ' + text } : ""
     end
 
     def icon_button_if_can(action, subject, icon_class, text, path, **opts)
-      button_to(path, **opts) do
-        content_tag(:i, '', class: icon_class) + ' ' + text
-      end if can?(action, subject)
+      can?(action, subject) ? button_to(path, **opts) { content_tag(:i, '', class: icon_class) + ' ' + text } : ""
     end
 
     # Common action button helpers with icons

@@ -1,15 +1,31 @@
 admin:
-  name: "Admin User"
+  first_name: "Admin"
+  last_name: "User"
   email: "admin@example.com"
+  active: true
+  created_at: <%= 1.day.ago %>
+  updated_at: <%= 1.day.ago %>
 
 manager:
-  name: "Manager User"
+  first_name: "Manager"
+  last_name: "User"
   email: "manager@example.com"
+  active: true
+  created_at: <%= 1.day.ago %>
+  updated_at: <%= 1.day.ago %>
 
 user:
-  name: "Regular User"
+  first_name: "Regular"
+  last_name: "User"
   email: "user@example.com"
+  active: true
+  created_at: <%= 1.day.ago %>
+  updated_at: <%= 1.day.ago %>
 
 guest:
-  name: "Guest User"
+  first_name: "Guest"
+  last_name: "User"
   email: "guest@example.com"
+  active: true
+  created_at: <%= 1.day.ago %>
+  updated_at: <%= 1.day.ago %>

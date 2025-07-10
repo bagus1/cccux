@@ -5,6 +5,9 @@ module Cccux
     belongs_to :role, class_name: 'Cccux::Role'
     belongs_to :ability_permission, class_name: 'Cccux::AbilityPermission'
     
+    # Delegate methods to ability_permission
+    delegate :action, :subject, :active?, to: :ability_permission, allow_nil: true
+    
     # Simplified access types: global, owned
     ACCESS_TYPES = %w[global owned].freeze
     

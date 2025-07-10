@@ -1,10 +1,10 @@
 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
   <h1>Create New User</h1>
-  <%= link_to "← Back to Users", cccux.users_path, 
+  <%= link_to "← Back to Users", users_path, 
       style: "background-color: #6c757d; color: white; padding: 0.5rem 1rem; text-decoration: none; border-radius: 4px;" %>
 </div>
 
-<%= form_with model: [@user], url: cccux.users_path, local: true do |form| %>
+<%= form_with model: [@user], url: users_path, local: true do |form| %>
   <% if @user.errors.any? %>
     <div style="background-color: #f8d7da; border: 1px solid #f5c6cb; color: #721c24; padding: 1rem; border-radius: 4px; margin-bottom: 2rem;">
       <h4 style="margin-top: 0;">Please fix the following errors:</h4>
@@ -16,7 +16,7 @@
     </div>
   <% end %>
 
-  <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; margin-bottom: 2rem;">
+  <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem;">
     <!-- User Information -->
     <div style="background-color: white; border: 1px solid #dee2e6; border-radius: 8px; padding: 1.5rem;">
       <h3 style="margin-top: 0; color: #495057;">User Information</h3>
@@ -31,12 +31,23 @@
         <%= form.label :password, style: "display: block; margin-bottom: 0.5rem; font-weight: bold; color: #495057;" %>
         <%= form.password_field :password, 
             style: "width: 100%; padding: 0.75rem; border: 1px solid #ced4da; border-radius: 4px; font-size: 1rem;" %>
-        <small style="color: #6c757d; font-size: 0.875rem;">Minimum 6 characters</small>
       </div>
 
       <div style="margin-bottom: 1.5rem;">
         <%= form.label :password_confirmation, style: "display: block; margin-bottom: 0.5rem; font-weight: bold; color: #495057;" %>
         <%= form.password_field :password_confirmation, 
+            style: "width: 100%; padding: 0.75rem; border: 1px solid #ced4da; border-radius: 4px; font-size: 1rem;" %>
+      </div>
+
+      <div style="margin-bottom: 1.5rem;">
+        <%= form.label :first_name, style: "display: block; margin-bottom: 0.5rem; font-weight: bold; color: #495057;" %>
+        <%= form.text_field :first_name, 
+            style: "width: 100%; padding: 0.75rem; border: 1px solid #ced4da; border-radius: 4px; font-size: 1rem;" %>
+      </div>
+
+      <div style="margin-bottom: 1.5rem;">
+        <%= form.label :last_name, style: "display: block; margin-bottom: 0.5rem; font-weight: bold; color: #495057;" %>
+        <%= form.text_field :last_name, 
             style: "width: 100%; padding: 0.75rem; border: 1px solid #ced4da; border-radius: 4px; font-size: 1rem;" %>
       </div>
     </div>
@@ -45,15 +56,14 @@
     <div style="background-color: white; border: 1px solid #dee2e6; border-radius: 8px; padding: 1.5rem;">
       <h3 style="margin-top: 0; color: #495057;">Role Assignment</h3>
       
-      <div style="background-color: #e7f3ff; border: 1px solid #b8daff; padding: 1rem; border-radius: 4px; margin-bottom: 1rem;">
-        <p style="margin: 0; color: #004085; font-size: 0.9rem;">
-          <strong>Note:</strong> Users automatically receive the "Basic User" role when created. 
-          You can assign additional roles here.
+      <div style="background-color: #fff3cd; border: 1px solid #ffeaa7; padding: 1rem; border-radius: 4px; margin-bottom: 1rem;">
+        <p style="margin: 0; color: #856404; font-size: 0.9rem;">
+          <strong>Note:</strong> Users will automatically receive the "Basic User" role.
         </p>
       </div>
       
       <% if @roles.any? %>
-        <div style="max-height: 200px; overflow-y: auto; border: 1px solid #e9ecef; border-radius: 4px; padding: 0.5rem;">
+        <div style="max-height: 300px; overflow-y: auto; border: 1px solid #e9ecef; border-radius: 4px; padding: 0.5rem;">
           <% @roles.each do |role| %>
             <div style="padding: 0.5rem; border-bottom: 1px solid #f8f9fa; display: flex; align-items: center;">
               <%= check_box_tag "user[role_ids][]", role.id, false, 
@@ -68,6 +78,15 @@
             </div>
           <% end %>
         </div>
+        
+        <div style="margin-top: 1rem; padding: 1rem; background-color: #e7f3ff; border-radius: 4px;">
+          <h5 style="margin: 0 0 0.5rem 0; color: #004085;">Role Selection Tips:</h5>
+          <ul style="margin: 0; padding-left: 1.5rem; color: #004085; font-size: 0.9rem;">
+            <li>Check roles to assign them to this user</li>
+            <li>Users automatically keep their "Basic User" role</li>
+            <li>Role assignments can be modified later</li>
+          </ul>
+        </div>
       <% else %>
         <div style="text-align: center; padding: 2rem; color: #6c757d; font-style: italic;">
           No roles available. Create roles first.
@@ -77,17 +96,13 @@
   </div>
 
   <!-- Form Actions -->
-  <div style="background-color: white; border: 1px solid #dee2e6; border-radius: 8px; padding: 1.5rem;">
+  <div style="background-color: white; border: 1px solid #dee2e6; border-radius: 8px; padding: 1.5rem; margin-top: 2rem;">
     <div style="display: flex; justify-content: space-between; align-items: center;">
       <div>
         <%= form.submit "Create User", 
             style: "background-color: #28a745; color: white; padding: 0.75rem 1.5rem; border: none; border-radius: 4px; cursor: pointer; font-size: 1rem; margin-right: 1rem;" %>
-        <%= link_to "Cancel", cccux.users_path, 
+        <%= link_to "Cancel", users_path, 
             style: "color: #6c757d; text-decoration: none; padding: 0.75rem 1rem; font-size: 1rem;" %>
-      </div>
-      
-      <div style="color: #6c757d; font-size: 0.9rem;">
-        <em>User will receive login credentials and can change password after first login</em>
       </div>
     </div>
   </div>

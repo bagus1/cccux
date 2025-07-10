@@ -1,14 +1,24 @@
 admin:
   name: "Admin"
+  created_at: <%= 1.day.ago %>
+  updated_at: <%= 1.day.ago %>
 
 manager:
   name: "Manager"
+  created_at: <%= 1.day.ago %>
+  updated_at: <%= 1.day.ago %>
 
 user:
   name: "User"
+  created_at: <%= 1.day.ago %>
+  updated_at: <%= 1.day.ago %>
 
 editor:
   name: "Editor"
+  created_at: <%= 1.day.ago %>
+  updated_at: <%= 1.day.ago %>
 
 moderator:
   name: "Moderator"
+  created_at: <%= 1.day.ago %>
+  updated_at: <%= 1.day.ago %>

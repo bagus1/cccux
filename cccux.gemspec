@@ -27,7 +27,7 @@ Gem::Specification.new do |spec|
   end
 
   # Runtime dependencies with proper version constraints
-  spec.add_dependency "rails", "~> 7.1", ">= 7.1.5.1"
+  spec.add_dependency "rails", ">= 7.1.5.1", "< 9.0"
   spec.add_dependency "cancancan", "~> 3.0"
   spec.add_dependency "zeitwerk", "~> 2.6"
   

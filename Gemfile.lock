@@ -3,7 +3,7 @@ PATH
   specs:
     cccux (0.1.1)
       cancancan (~> 3.0)
-      rails (~> 7.1, >= 7.1.5.1)
+      rails (>= 7.1.5.1, < 9.0)
       zeitwerk (~> 2.6)
 
 GEM
@@ -80,18 +80,32 @@ GEM
       minitest (>= 5.1)
       securerandom (>= 0.3)
       tzinfo (~> 2.0, >= 2.0.5)
+    ansi (1.5.0)
     base64 (0.3.0)
+    bcrypt (3.1.20)
     benchmark (0.4.1)
     bigdecimal (3.2.2)
     builder (3.3.0)
+    byebug (12.0.0)
     cancancan (3.6.1)
     concurrent-ruby (1.3.5)
     connection_pool (2.5.3)
     crass (1.0.6)
     date (3.4.1)
+    devise (4.9.4)
+      bcrypt (~> 3.0)
+      orm_adapter (~> 0.1)
+      railties (>= 4.1.0)
+      responders
+      warden (~> 1.2.3)
     drb (2.2.3)
     erb (5.0.1)
     erubi (1.13.1)
+    factory_bot (6.5.4)
+      activesupport (>= 6.1.0)
+    factory_bot_rails (6.5.0)
+      factory_bot (~> 6.5)
+      railties (>= 6.1.0)
     globalid (1.2.1)
       activesupport (>= 6.1)
     i18n (1.14.7)
@@ -113,6 +127,11 @@ GEM
     marcel (1.0.4)
     mini_mime (1.1.5)
     minitest (5.25.5)
+    minitest-reporters (1.7.1)
+      ansi
+      builder
+      minitest (>= 5.0)
+      ruby-progressbar
     net-imap (0.5.9)
       date
       net-protocol
@@ -139,6 +158,8 @@ GEM
       racc (~> 1.4)
     nokogiri (1.18.8-x86_64-linux-musl)
       racc (~> 1.4)
+    orm_adapter (0.5.0)
+    ostruct (0.6.2)
     pp (0.6.2)
       prettyprint
     prettyprint (0.2.0)
@@ -191,6 +212,10 @@ GEM
       psych (>= 4.0.0)
     reline (0.6.1)
       io-console (~> 0.5)
+    responders (3.1.1)
+      actionpack (>= 5.2)
+      railties (>= 5.2)
+    ruby-progressbar (1.13.0)
     securerandom (0.4.1)
     sprockets (4.2.2)
       concurrent-ruby (~> 1.0)
@@ -214,6 +239,8 @@ GEM
     tzinfo (2.0.6)
       concurrent-ruby (~> 1.0)
     useragent (0.16.11)
+    warden (1.2.9)
+      rack (>= 2.0.9)
     websocket-driver (0.8.0)
       base64
       websocket-extensions (>= 0.1.0)
@@ -231,7 +258,12 @@ PLATFORMS
   x86_64-linux-musl
 
 DEPENDENCIES
+  byebug
   cccux!
+  devise
+  factory_bot_rails
+  minitest-reporters
+  ostruct
   puma
   sprockets-rails
   sqlite3
