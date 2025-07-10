@@ -77,9 +77,9 @@ class Cccux::RoleTest < ActiveSupport::TestCase
     assert_nil Cccux::RoleAbility.find_by(id: role_ability_id)
   end
 
-  test "should normalize name case" do
+  test "should preserve name case" do
     role = Cccux::Role.create!(name: "super admin", active: true)
-    assert_equal "Super Admin", role.name
+    assert_equal "super admin", role.name
   end
 
   test "should provide slug from name" do

@@ -23,7 +23,7 @@ module Cccux
     # Automatically load and authorize resources for all actions
     # This works because CCCUX provides default roles (Guest, Basic User) 
     # so every user has permissions to check against
-    load_and_authorize_resource
+    # load_and_authorize_resource  # Commented out to avoid conflicts with child controllers
     
     protected
     
@@ -46,7 +46,6 @@ module Cccux
     private
     
     def ensure_role_manager
-      # Check if user is authenticated
       unless defined?(current_user) && current_user&.persisted?
         respond_to do |format|
           if Rails.env.test?
@@ -58,16 +57,15 @@ module Cccux
         end
         return
       end
-      
-      # Check if user has ability to manage users (read or update permissions)
-      unless current_user.can?(:read, User) || current_user.can?(:update, User)
+
+      unless current_user.has_role?("Role Manager")
         respond_to do |format|
           if Rails.env.test?
             format.html { render plain: "Access denied", status: :forbidden }
           else
-            format.html { redirect_to main_app.root_path, alert: 'Access denied. You need permission to manage users.' }
+            format.html { redirect_to main_app.root_path, alert: 'Access denied. You need the Role Manager role.' }
           end
-          format.json { render json: { success: false, error: 'Access denied. You need permission to manage users.' }, status: :forbidden }
+          format.json { render json: { success: false, error: 'Access denied. You need the Role Manager role.' }, status: :forbidden }
         end
         return
       end

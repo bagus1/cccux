@@ -15,7 +15,7 @@ module Cccux
 
     # Instance methods for user authorization
     def has_role?(role_name)
-      cccux_roles.active.exists?(name: role_name)
+      cccux_user_roles.active.joins(:role).where(cccux_roles: { name: role_name }).exists?
     end
 
     def has_any_role?(*role_names)

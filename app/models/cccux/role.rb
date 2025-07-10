@@ -13,7 +13,6 @@ module Cccux
     validates :priority, presence: true, numericality: { only_integer: true, greater_than: 0 }
     
     after_initialize :set_default_priority, if: :new_record?
-    before_save :normalize_name_case
     validate :name_uniqueness_case_insensitive
     
     scope :active, -> { where(active: true) }
@@ -81,11 +80,6 @@ module Cccux
       else
         nil
       end
-    end
-    
-    # Normalize name case (capitalize each word)
-    def normalize_name_case
-      self.name = name.titleize if name.present?
     end
     
     # Generate slug from name

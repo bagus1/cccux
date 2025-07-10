@@ -1,6 +1,9 @@
 class Cccux::UsersController < Cccux::CccuxController
-  # Ensure only Role Managers can access user management
-  before_action :ensure_role_manager
+  # Restore load_and_authorize_resource for User
+  load_and_authorize_resource class: User
+  
+  # Add simple authentication check - user must be signed in
+  before_action :require_authentication
   
   # Remove manual set_user - let load_and_authorize_resource handle it
   # before_action :set_user, only: [:show, :edit, :update, :destroy]
@@ -102,6 +105,16 @@ class Cccux::UsersController < Cccux::CccuxController
   end
   
   private
+  
+  def require_authentication
+    unless user_signed_in?
+      respond_to do |format|
+        format.html { render plain: "Access denied", status: :forbidden }
+        format.json { render json: { error: 'Access denied' }, status: :forbidden }
+      end
+      return
+    end
+  end
   
   # Remove set_user method - load_and_authorize_resource handles this
   # def set_user

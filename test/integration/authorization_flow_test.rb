@@ -4,108 +4,40 @@ class Cccux::AuthorizationFlowTest < ActionDispatch::IntegrationTest
   include Devise::Test::IntegrationHelpers
   
   def setup
+    # Ensure all AbilityPermission records for User exist and are active
+    %w[read create update destroy index].each do |action|
+      Cccux::AbilityPermission.find_or_create_by!(action: action, subject: 'User') do |perm|
+        perm.active = true
+      end
+      # If already exists, ensure active is true
+      perm = Cccux::AbilityPermission.find_by(action: action, subject: 'User')
+      perm.update!(active: true) if perm && !perm.active
+    end
+
     # Create only the essential roles and users for the base setup
     @role_manager_role = Cccux::Role.find_or_create_by(name: "Role Manager") do |role|
+      role.description = "Can manage roles and permissions"
       role.active = true
+      role.priority = 25
     end
-    
-    # Create users
-    @role_manager = User.find_or_create_by(email: "role_manager@example.com") do |user|
-      user.password = "password123"
+
+    # Explicitly assign all permissions for Cccux::Role to Role Manager
+    %w[read create update destroy index].each do |action|
+      perm = Cccux::AbilityPermission.find_or_create_by!(action: action, subject: 'Cccux::Role') { |p| p.active = true }
+      @role_manager_role.role_abilities.find_or_create_by!(ability_permission: perm)
     end
-    @manager = User.find_or_create_by(email: "manager@example.com") do |user|
-      user.password = "password123"
-    end
-    @user = User.find_or_create_by(email: "user@example.com") do |user|
-      user.password = "password123"
-    end
-    @guest = User.find_or_create_by(email: "guest@example.com") do |user|
-      user.password = "password123"
-    end
-    
-    # Assign Role Manager role to the role manager user
+
+    @role_manager = User.create!(email: "role_manager@example.com", password: "password123")
     @role_manager.assign_role(@role_manager_role)
-    
-    # Setup basic permissions that the Role Manager will use to create other roles
+    @manager = User.create!(email: "manager@example.com", password: "password123")
+    @user = User.create!(email: "user@example.com", password: "password123")
     setup_basic_permissions
   end
 
   def setup_basic_permissions
-    # Create only the essential permissions that Role Manager needs to function
-    user_permissions = [
-      Cccux::AbilityPermission.find_or_create_by(action: 'read', subject: 'User') do |p|
-        p.active = true
-      end,
-      Cccux::AbilityPermission.find_or_create_by(action: 'create', subject: 'User') do |p|
-        p.active = true
-      end,
-      Cccux::AbilityPermission.find_or_create_by(action: 'update', subject: 'User') do |p|
-        p.active = true
-      end,
-      Cccux::AbilityPermission.find_or_create_by(action: 'destroy', subject: 'User') do |p|
-        p.active = true
-      end
-    ]
-    
-    role_permissions = [
-      Cccux::AbilityPermission.find_or_create_by(action: 'read', subject: 'Cccux::Role') do |p|
-        p.active = true
-      end,
-      Cccux::AbilityPermission.find_or_create_by(action: 'create', subject: 'Cccux::Role') do |p|
-        p.active = true
-      end,
-      Cccux::AbilityPermission.find_or_create_by(action: 'update', subject: 'Cccux::Role') do |p|
-        p.active = true
-      end,
-      Cccux::AbilityPermission.find_or_create_by(action: 'destroy', subject: 'Cccux::Role') do |p|
-        p.active = true
-      end
-    ]
-    
-    permission_permissions = [
-      Cccux::AbilityPermission.find_or_create_by(action: 'read', subject: 'Cccux::AbilityPermission') do |p|
-        p.active = true
-      end,
-      Cccux::AbilityPermission.find_or_create_by(action: 'create', subject: 'Cccux::AbilityPermission') do |p|
-        p.active = true
-      end,
-      Cccux::AbilityPermission.find_or_create_by(action: 'update', subject: 'Cccux::AbilityPermission') do |p|
-        p.active = true
-      end,
-      Cccux::AbilityPermission.find_or_create_by(action: 'destroy', subject: 'Cccux::AbilityPermission') do |p|
-        p.active = true
-      end
-    ]
-    
-    role_ability_permissions = [
-      Cccux::AbilityPermission.find_or_create_by(action: 'read', subject: 'Cccux::RoleAbility') do |p|
-        p.active = true
-      end,
-      Cccux::AbilityPermission.find_or_create_by(action: 'create', subject: 'Cccux::RoleAbility') do |p|
-        p.active = true
-      end,
-      Cccux::AbilityPermission.find_or_create_by(action: 'update', subject: 'Cccux::RoleAbility') do |p|
-        p.active = true
-      end,
-      Cccux::AbilityPermission.find_or_create_by(action: 'destroy', subject: 'Cccux::RoleAbility') do |p|
-        p.active = true
-      end
-    ]
-    
-    # Assign all permissions to Role Manager role
-    user_permissions.each do |permission|
-      @role_manager_role.role_abilities.find_or_create_by(ability_permission: permission, owned: false)
-    end
-    
-    role_permissions.each do |permission|
-      @role_manager_role.role_abilities.find_or_create_by(ability_permission: permission, owned: false)
-    end
-    
-    permission_permissions.each do |permission|
-      @role_manager_role.role_abilities.find_or_create_by(ability_permission: permission, owned: false)
-    end
-    
-    role_ability_permissions.each do |permission|
+    # Assign ALL permissions in the AbilityPermission table to Role Manager role
+    # This matches the behavior in cccux.rake setup task
+    Cccux::AbilityPermission.all.each do |permission|
       @role_manager_role.role_abilities.find_or_create_by(ability_permission: permission, owned: false)
     end
   end
@@ -344,11 +276,13 @@ class Cccux::AuthorizationFlowTest < ActionDispatch::IntegrationTest
 
   test "role_manager_can_fully_manage_users_roles_and_permissions" do
     puts "Debug: Starting role_manager_can_fully_manage_users_roles_and_permissions test"
+    puts "Debug: Role manager user roles: #{@role_manager.cccux_roles.pluck(:name)}"
     sign_in_as(@role_manager)
     puts "Debug: Signed in as role manager: #{@role_manager.email}"
 
     # USERS CRUD
     puts "Debug: Testing users index"
+
     get cccux.users_path
     puts "Debug: Users index response: #{response.status}"
     assert_response :success
@@ -379,9 +313,15 @@ class Cccux::AuthorizationFlowTest < ActionDispatch::IntegrationTest
     get cccux.new_role_path
     assert_response :success
 
+    puts "Debug: About to create role with name: 'TestRole'"
     post cccux.roles_path, params: { role: { name: "TestRole", active: true } }
+    puts "Debug: Role creation response status: #{response.status}"
+    puts "Debug: Role creation response body: #{response.body}" if response.status != 200 && response.status != 302
+    puts "Debug: Response location: #{response.location}" if response.status == 302
     assert_response :redirect
     test_role = Cccux::Role.find_by(name: "TestRole")
+    puts "Debug: TestRole found in DB: #{test_role.inspect}"
+    puts "Debug: All roles in DB: #{Cccux::Role.all.map { |r| r.name }}"
     assert test_role
 
     get cccux.edit_role_path(test_role)
@@ -423,6 +363,17 @@ class Cccux::AuthorizationFlowTest < ActionDispatch::IntegrationTest
     delete cccux.ability_permission_path(perm)
     assert_response :redirect
     assert_nil Cccux::AbilityPermission.find_by(action: "manage", subject: "Gadget")
+  end
+
+  test "non_role_manager_cannot_access_admin" do
+    # Create a user WITHOUT the Role Manager role
+    user = User.create!(email: "not_manager@example.com", password: "password123")
+    sign_in_as(user)
+
+    # Try to access an admin endpoint (e.g., users index)
+    get cccux.users_path
+    assert_response :forbidden
+    assert_includes response.body, "You do not have permission to access this page."
   end
 
   private

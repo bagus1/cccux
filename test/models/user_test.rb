@@ -50,29 +50,29 @@ class Cccux::UserTest < ActiveSupport::TestCase
   test "should assign roles to user" do
     @user.assign_role(@admin_role)
     assert_includes @user.cccux_roles, @admin_role
-    assert @user.has_role?('Test Admin')
+    assert @user.has_role?('TestAdmin')
   end
 
   test "should check multiple roles" do
     @user.assign_role(@admin_role)
     @user.assign_role(@user_role)
-    assert @user.has_role?('Test Admin')
-    assert @user.has_role?('Test User')
+    assert @user.has_role?('TestAdmin')
+    assert @user.has_role?('TestUser')
     assert_not @user.has_role?(:moderator)
   end
 
   test "should handle role assignment with strings" do
     @user.assign_role(@admin_role)
-    assert @user.has_role?('Test Admin')
-    assert @user.has_role?('Test Admin')
+    assert @user.has_role?('TestAdmin')
+    assert @user.has_role?('TestAdmin')
   end
 
   test "should list all role names" do
     @user.assign_role(@admin_role)
     @user.assign_role(@user_role)
     role_names = @user.role_names
-    assert_includes role_names, "Test Admin"
-    assert_includes role_names, "Test User"
+    assert_includes role_names, "TestAdmin"
+    assert_includes role_names, "TestUser"
     assert_equal 2, role_names.length
   end
 end 

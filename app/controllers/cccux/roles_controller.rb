@@ -1,9 +1,10 @@
 module Cccux
   class RolesController < CccuxController
-    # Ensure only Role Managers can access role management
-    before_action :ensure_role_manager
     # Skip authorization for model_columns since it's just a helper endpoint
     skip_authorization_check only: [:model_columns]
+
+    # Add load_and_authorize_resource to automatically load roles
+    load_and_authorize_resource class: Cccux::Role
 
     # Remove manual set_role - let load_and_authorize_resource handle it
     # before_action :set_role, only: [:show, :edit, :update, :destroy]
@@ -49,6 +50,9 @@ module Cccux
     end
     
     def edit
+      puts "Debug: edit action - @role = #{@role.inspect}"
+      puts "Debug: edit action - params[:id] = #{params[:id]}"
+      puts "Debug: edit action - current_user = #{current_user.inspect}"
       @permission_matrix = build_permission_matrix
       @available_permissions = Cccux::AbilityPermission.all.group_by(&:subject)
       @available_ownership_models = discover_application_models
@@ -69,18 +73,22 @@ module Cccux
     def destroy
       respond_to do |format|
         if @role.users.any?
-          format.turbo_stream do
-            render turbo_stream: turbo_stream.update("flash", 
-              partial: "flash", locals: { alert: "Cannot delete role that has users assigned to it." })
+          if defined?(Turbo::StreamsChannel)
+            format.turbo_stream do
+              render turbo_stream: turbo_stream.update("flash", 
+                partial: "flash", locals: { alert: "Cannot delete role that has users assigned to it." })
+            end
           end
           format.html { redirect_to cccux.roles_path, alert: 'Cannot delete role that has users assigned to it.' }
         else
           @role.destroy
-          format.turbo_stream do
-            render turbo_stream: [
-              turbo_stream.remove("role_#{@role.id}"),
-              turbo_stream.update("flash", partial: "flash", locals: { notice: "Role was successfully deleted." })
-            ]
+          if defined?(Turbo::StreamsChannel)
+            format.turbo_stream do
+              render turbo_stream: [
+                turbo_stream.remove("role_#{@role.id}"),
+                turbo_stream.update("flash", partial: "flash", locals: { notice: "Role was successfully deleted." })
+              ]
+            end
           end
           format.html { redirect_to cccux.roles_path, notice: 'Role was successfully deleted.' }
         end

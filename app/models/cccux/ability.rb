@@ -8,6 +8,12 @@ module Cccux
       user ||= User.new # guest user (not logged in)
       @context = context || {}
       
+      # Debug output: print all AbilityPermission records for User
+      puts "Debug: AbilityPermission records for User:"
+      Cccux::AbilityPermission.where(subject: 'User').each do |perm|
+        puts "  action: #{perm.action}, subject: #{perm.subject}, active: #{perm.active}"
+      end
+      
       # Track which permissions have been defined to avoid conflicts
       @defined_permissions = Set.new
       
@@ -79,7 +85,7 @@ module Cccux
       
       # For User resource, keep owned logic for now
       if permission.subject == 'User'
-        if role_ability.context == 'owned' || (role_ability.owned && user&.persisted?)
+        if role_ability.context == 'owned' || role_ability.owned
           actions_to_grant.each { |act| apply_owned_ability(act, model_class, user, role_ability) }
         else
           actions_to_grant.each { |act| can act, model_class }

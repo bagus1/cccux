@@ -11,7 +11,7 @@ module Cccux
     validates :role_id, presence: true
     validates :user_id, uniqueness: { scope: :role_id, message: 'already has this role' }
     
-    scope :active, -> { where(active: true).joins(:role).where(cccux_roles: { active: true }) }
+    scope :active, -> { joins(:role).where(cccux_roles: { active: true }) }
     scope :for_user, ->(user) { where(user: user) }
     scope :with_role, ->(role) { where(role: role) }
 

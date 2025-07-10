@@ -1,7 +1,5 @@
 module Cccux
   class RoleAbilitiesController < CccuxController
-    # Ensure only Role Managers can access role ability management
-    before_action :ensure_role_manager
     before_action :set_role, only: [:index, :create, :destroy]
     before_action :set_role_ability, only: [:destroy]
 
