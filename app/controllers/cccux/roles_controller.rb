@@ -50,9 +50,6 @@ module Cccux
     end
     
     def edit
-      puts "Debug: edit action - @role = #{@role.inspect}"
-      puts "Debug: edit action - params[:id] = #{params[:id]}"
-      puts "Debug: edit action - current_user = #{current_user.inspect}"
       @permission_matrix = build_permission_matrix
       @available_permissions = Cccux::AbilityPermission.all.group_by(&:subject)
       @available_ownership_models = discover_application_models

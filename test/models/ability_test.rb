@@ -166,10 +166,6 @@ class Cccux::AbilityTest < ActiveSupport::TestCase
     @user.assign_role(@admin_role)
     @user.reload
     
-    # Debug: Check if role was assigned
-    puts "Debug: After assign_role - User roles: #{@user.cccux_roles.count}"
-    puts "Debug: After assign_role - User role names: #{@user.role_names}"
-    
     ability = Cccux::Ability.new(@user)
     
     assert ability.can?(:read, @post)
