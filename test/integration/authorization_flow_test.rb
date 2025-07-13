@@ -257,12 +257,6 @@ class Cccux::AuthorizationFlowTest < ActionDispatch::IntegrationTest
     other_post = create_test_post(@manager)
     create_post_manager(@user, other_post)
     
-    puts "Debug: @user.id = #{@user.id}"
-    puts "Debug: @manager.id = #{@manager.id}"
-    puts "Debug: user_post.user_id = #{user_post.user_id}"
-    puts "Debug: other_post.user_id = #{other_post.user_id}"
-    puts "Debug: PostManager.where(user_id: #{@user.id}).pluck(:post_id) = #{PostManager.where(user_id: @user.id).pluck(:post_id)}"
-    
     sign_in_as(@user)
     
     # Can manage posts they are manager for (even if they didn't create them)
@@ -275,16 +269,11 @@ class Cccux::AuthorizationFlowTest < ActionDispatch::IntegrationTest
   end
 
   test "role_manager_can_fully_manage_users_roles_and_permissions" do
-    puts "Debug: Starting role_manager_can_fully_manage_users_roles_and_permissions test"
-    puts "Debug: Role manager user roles: #{@role_manager.cccux_roles.pluck(:name)}"
     sign_in_as(@role_manager)
-    puts "Debug: Signed in as role manager: #{@role_manager.email}"
 
     # USERS CRUD
-    puts "Debug: Testing users index"
 
     get cccux.users_path
-    puts "Debug: Users index response: #{response.status}"
     assert_response :success
 
     get cccux.new_user_path
@@ -313,15 +302,9 @@ class Cccux::AuthorizationFlowTest < ActionDispatch::IntegrationTest
     get cccux.new_role_path
     assert_response :success
 
-    puts "Debug: About to create role with name: 'TestRole'"
     post cccux.roles_path, params: { role: { name: "TestRole", active: true } }
-    puts "Debug: Role creation response status: #{response.status}"
-    puts "Debug: Role creation response body: #{response.body}" if response.status != 200 && response.status != 302
-    puts "Debug: Response location: #{response.location}" if response.status == 302
     assert_response :redirect
     test_role = Cccux::Role.find_by(name: "TestRole")
-    puts "Debug: TestRole found in DB: #{test_role.inspect}"
-    puts "Debug: All roles in DB: #{Cccux::Role.all.map { |r| r.name }}"
     assert test_role
 
     get cccux.edit_role_path(test_role)
@@ -342,15 +325,9 @@ class Cccux::AuthorizationFlowTest < ActionDispatch::IntegrationTest
     get cccux.new_ability_permission_path
     assert_response :success
 
-    puts "Debug: About to create permission with action: 'manage', subject: 'Widget'"
     post "/cccux/ability_permissions", params: { ability_permission: { action: "manage", subject: "Widget", active: true } }
-    puts "Debug: Response status: #{response.status}"
-    puts "Debug: Response body: #{response.body}" if response.status != 302
-    puts "Debug: Response location: #{response.location}" if response.status == 302
     assert_response :redirect
     perm = Cccux::AbilityPermission.find_by(action: "manage", subject: "Widget")
-    puts "Debug: Permission found: #{perm.inspect}"
-    puts "Debug: All permissions after creation: #{Cccux::AbilityPermission.all.map { |p| "#{p.action} #{p.subject}" }}"
     assert perm
 
     get cccux.edit_ability_permission_path(perm)
