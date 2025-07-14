@@ -8,12 +8,6 @@ module Cccux
       user ||= User.new # guest user (not logged in)
       @context = context || {}
       
-      # Debug output: print all AbilityPermission records for User
-      puts "Debug: AbilityPermission records for User:"
-      Cccux::AbilityPermission.where(subject: 'User').each do |perm|
-        puts "  action: #{perm.action}, subject: #{perm.subject}, active: #{perm.active}"
-      end
-      
       # Track which permissions have been defined to avoid conflicts
       @defined_permissions = Set.new
       
