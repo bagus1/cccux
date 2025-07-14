@@ -7,7 +7,6 @@ Cccux::Engine.routes.draw do
   
   # Dashboard route (alias for root)
   get '/dashboard', to: 'dashboard#index', as: :dashboard
-  get '/test', to: 'simple#index'
   
   # Model Discovery Routes
   get 'model-discovery', to: 'dashboard#model_discovery', as: :model_discovery
