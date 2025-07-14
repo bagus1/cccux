@@ -98,13 +98,28 @@ module Cccux
         if ownership_model && user&.persisted?
           # Parse conditions (should be a JSON string or nil)
           conditions = role_ability.ownership_conditions.present? ? JSON.parse(role_ability.ownership_conditions) : {}
-          foreign_key = conditions["foreign_key"] || (model_class.name.foreign_key)
+          foreign_key = conditions["foreign_key"]
           user_key = conditions["user_key"] || "user_id"
-          # Find all records owned by user via the join model
-          owned_ids = ownership_model.where(user_key => user.id).pluck(foreign_key)
-          if owned_ids.any?
-            can action, model_class, id: owned_ids
+          
+          # Require foreign_key to be explicitly specified when using ownership model
+          if foreign_key.present?
+            # Find all records owned by user via the join model
+            owned_ids = ownership_model.where(user_key => user.id).pluck(foreign_key)
+            if owned_ids.any?
+              # Check if the target model has the foreign key column
+              if model_class.column_names.include?(foreign_key)
+                # Direct ownership: model has the foreign key (e.g., Comment has post_id)
+                can action, model_class, foreign_key.to_sym => owned_ids
+              else
+                # Indirect ownership: model doesn't have the foreign key, use primary key
+                # This means the foreign key in the join table refers to the target model's primary key
+                can action, model_class, id: owned_ids
+              end
+            else
+              can action, model_class, id: []
+            end
           else
+            # Fall back to no access if foreign_key is not specified
             can action, model_class, id: []
           end
         else

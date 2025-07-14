@@ -44,9 +44,7 @@ module Cccux
         return false unless role
       end
       
-      user_role = Cccux::UserRole.find_or_create_by(user: self, role: role)
-      user_role.update!(active: true)
-      user_role
+      Cccux::UserRole.find_or_create_by(user: self, role: role)
     end
 
     def remove_role(role)

@@ -224,6 +224,9 @@ module Cccux
     def discover_application_models
       models = []
       
+      # Eager load all models to ensure they're available
+      Rails.application.eager_load!
+      
       # Get all ActiveRecord models from the application
       ActiveRecord::Base.descendants.each do |model|
         model_name = model.name
@@ -235,15 +238,11 @@ module Cccux
         table_name = model.table_name
         next if table_name.blank? || skip_table?(table_name)
         
-        models << {
-          name: model_name,
-          table_name: table_name,
-          columns: model.column_names
-        }
+        models << model_name
       end
       
       # Sort by name for consistency
-      models.sort_by { |model| model[:name] }
+      models.sort
     end
     
     def skip_model_by_name?(model_name)

@@ -47,7 +47,7 @@ module Cccux
       
       if added_permissions.any?
         redirect_to cccux.model_discovery_path, 
-                   notice: "Successfully added #{added_permissions.count} permissions for #{models_to_add.count} models!"
+                   notice: "Successfully added #{added_permissions.count} permissions for #{models_to_add.count} models! For each of these models, you'll probably want to add 'load_and_authorize_resource' to the controller."
       else
         redirect_to cccux.model_discovery_path, 
                    alert: "No new permissions were added. Models may already have permissions."
