@@ -123,6 +123,10 @@ class Cccux::UsersControllerTest < ActionDispatch::IntegrationTest
     # Test the authorization
     assert @user.can?(:read, User), "User should be able to read User"
     assert @user.can?(:index, User), "User should be able to index User"
+    
+    # Make the actual HTTP request
+    get cccux.users_path
+    assert_response :success
   end
 
   test "should deny index when not authenticated" do
@@ -208,4 +212,6 @@ class Cccux::UsersControllerTest < ActionDispatch::IntegrationTest
     
     assert_includes @other_user.reload.cccux_roles, new_role
   end
+
+
 end 

@@ -682,7 +682,7 @@ namespace :cccux do
       layout_content = File.read(layout_path)
       
       # Check if footer is already included
-      unless layout_content.include?('render "shared/footer"')
+      unless layout_content.include?("render 'shared/footer'")
         # Add footer before closing body tag
         if layout_content.include?('</body>')
           updated_content = layout_content.gsub(
