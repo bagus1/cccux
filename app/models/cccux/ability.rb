@@ -14,10 +14,8 @@ module Cccux
       if user.persisted?
         # Authenticated user - use their assigned roles in priority order
         user_roles = Cccux::UserRole.active.for_user(user).includes(:role).joins(:role).order('cccux_roles.priority DESC')
-        puts "Debug: User #{user.id} has #{user_roles.count} roles"
         user_roles.each do |user_role|
           role = user_role.role
-          puts "Debug: Processing role: #{role.name}"
           apply_role_abilities(role, user)
         end
       else
@@ -45,7 +43,6 @@ module Cccux
         
         # Determine the model class
         model_class = resolve_model_class(permission.subject)
-        puts "Debug: Permission subject: #{permission.subject}, Model class: #{model_class}"
         next unless model_class
         
         # Check if this permission has already been defined by a higher priority role
