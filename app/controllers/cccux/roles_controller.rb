@@ -1,11 +1,13 @@
 module Cccux
   class RolesController < CccuxController
-    # Ensure only Role Managers can access role management
-    before_action :ensure_role_manager
     # Skip authorization for model_columns since it's just a helper endpoint
     skip_authorization_check only: [:model_columns]
 
-    before_action :set_role, only: [:show, :edit, :update, :destroy]
+    # Add load_and_authorize_resource to automatically load roles
+    load_and_authorize_resource class: Cccux::Role
+
+    # Remove manual set_role - let load_and_authorize_resource handle it
+    # before_action :set_role, only: [:show, :edit, :update, :destroy]
     
     def index
       @roles = Cccux::Role.includes(:ability_permissions, :users)
@@ -25,7 +27,8 @@ module Cccux
       @role = Cccux::Role.new(role_params)
       
       respond_to do |format|
-        if @role.save
+        format.html { redirect_to cccux.role_path(@role), notice: 'Role was successfully created.' } if @role.save
+        if defined?(Turbo::StreamsChannel) && @role.save
           format.turbo_stream do
             render turbo_stream: [
               turbo_stream.update("new_role_form", ""),
@@ -33,13 +36,15 @@ module Cccux
               turbo_stream.update("flash", partial: "flash", locals: { notice: "Role was successfully created." })
             ]
           end
-          format.html { redirect_to cccux.role_path(@role), notice: 'Role was successfully created.' }
-        else
-          format.turbo_stream do
-            render turbo_stream: turbo_stream.update("new_role_form", 
-              partial: "form", locals: { role: @role })
-          end
+        end
+        unless @role.save
           format.html { render :new, status: :unprocessable_entity }
+          if defined?(Turbo::StreamsChannel)
+            format.turbo_stream do
+              render turbo_stream: turbo_stream.update("new_role_form", 
+                partial: "form", locals: { role: @role })
+            end
+          end
         end
       end
     end
@@ -65,18 +70,22 @@ module Cccux
     def destroy
       respond_to do |format|
         if @role.users.any?
-          format.turbo_stream do
-            render turbo_stream: turbo_stream.update("flash", 
-              partial: "flash", locals: { alert: "Cannot delete role that has users assigned to it." })
+          if defined?(Turbo::StreamsChannel)
+            format.turbo_stream do
+              render turbo_stream: turbo_stream.update("flash", 
+                partial: "flash", locals: { alert: "Cannot delete role that has users assigned to it." })
+            end
           end
           format.html { redirect_to cccux.roles_path, alert: 'Cannot delete role that has users assigned to it.' }
         else
           @role.destroy
-          format.turbo_stream do
-            render turbo_stream: [
-              turbo_stream.remove("role_#{@role.id}"),
-              turbo_stream.update("flash", partial: "flash", locals: { notice: "Role was successfully deleted." })
-            ]
+          if defined?(Turbo::StreamsChannel)
+            format.turbo_stream do
+              render turbo_stream: [
+                turbo_stream.remove("role_#{@role.id}"),
+                turbo_stream.update("flash", partial: "flash", locals: { notice: "Role was successfully deleted." })
+              ]
+            end
           end
           format.html { redirect_to cccux.roles_path, notice: 'Role was successfully deleted.' }
         end
@@ -126,9 +135,10 @@ module Cccux
     
     private
     
-    def set_role
-      @role = Cccux::Role.find(params[:id])
-    end
+    # Remove set_role method - load_and_authorize_resource handles this
+    # def set_role
+    #   @role = Cccux::Role.find(params[:id])
+    # end
     
     def build_permission_matrix
       subjects = Cccux::AbilityPermission.distinct.pluck(:subject).sort
@@ -200,15 +210,7 @@ module Cccux
             conditions["user_key"] = ownership_user_key[permission.id.to_s]
           end
           
-          if conditions.any?
-            role_ability.ownership_conditions = conditions.to_json
-          else
-            role_ability.ownership_conditions = nil
-          end
-        else
-          # Clear ownership configuration for non-owned access types
-          role_ability.ownership_source = nil
-          role_ability.ownership_conditions = nil
+          role_ability.ownership_conditions = conditions.to_json if conditions.any?
         end
         
         role_ability.save!
@@ -218,73 +220,60 @@ module Cccux
     def role_params
       params.require(:role).permit(:name, :description, :active, :priority)
     end
-
+    
     def discover_application_models
       models = []
-      begin
-        # Direct approach: Get models from database tables (bypasses all autoloading issues)
-        application_tables = ActiveRecord::Base.connection.tables.reject do |table|
-          # Skip Rails internal tables and CCCUX tables
-          table.start_with?('schema_migrations', 'ar_internal_metadata', 'cccux_') ||
-          skip_table?(table)
-        end
-        application_tables.each do |table|
-          # Convert table name to model name
-          model_name = table.singularize.camelize
-          # Verify the model exists and is valid
-          begin
-            if Object.const_defined?(model_name)
-              model_class = Object.const_get(model_name)
-              if model_class.respond_to?(:table_name) && 
-                 model_class.table_name == table &&
-                 !skip_model_by_name?(model_name)
-                models << model_name
-              end
-            else
-              # Model constant doesn't exist yet, but table does - likely a valid model
-              unless skip_model_by_name?(model_name)
-                models << model_name
-              end
-            end
-          rescue => e
-            # Ignore
-          end
-        end
-        # Always include CCCUX engine models for management (but not User since host app owns it)
-        cccux_models = %w[Cccux::Role Cccux::AbilityPermission Cccux::UserRole Cccux::RoleAbility]
-        models += cccux_models
-      rescue => e
-        Rails.logger.warn "Error discovering models: #{e.message}"
-        Rails.logger.warn e.backtrace.join("\n")
+      
+      # Eager load all models to ensure they're available
+      Rails.application.eager_load!
+      
+      # Get all ActiveRecord models from the application
+      ActiveRecord::Base.descendants.each do |model|
+        model_name = model.name
+        
+        # Skip if model should be excluded
+        next if skip_model_by_name?(model_name)
+        
+        # Skip if table doesn't exist or should be excluded
+        table_name = model.table_name
+        next if table_name.blank? || skip_table?(table_name)
+        
+        models << model_name
       end
-      models.uniq.sort
+      
+      # Sort by name for consistency
+      models.sort
     end
-
+    
     def skip_model_by_name?(model_name)
       excluded_patterns = [
-        /^ActiveRecord::/,
-        /^ActiveStorage::/,
-        /^ActionText::/,
-        /^ActionMailbox::/,
-        /^ApplicationRecord$/,
-        /Version$/,
-        /Schema/,
-        /Migration/
+        /^HABTM_/,           # Has and belongs to many join tables
+        /^ActiveRecord::/,    # ActiveRecord internal classes
+        /^ActionText::/,      # ActionText models
+        /^ActiveStorage::/,   # ActiveStorage models
+        /^ActionMailbox::/,   # ActionMailbox models
+        /^Cccux::/,          # CCCUX engine models (we'll handle these separately)
+        /^ApplicationRecord$/, # Base application record
+        /^ApplicationController$/, # Controllers
+        /^ApplicationHelper$/,    # Helpers
+        /^ApplicationMailer$/     # Mailers
       ]
+      
       excluded_patterns.any? { |pattern| model_name.match?(pattern) }
     end
-
+    
     def skip_table?(table_name)
       excluded_tables = [
+        'schema_migrations',
+        'ar_internal_metadata',
         'active_storage_blobs',
         'active_storage_attachments',
-        'active_storage_variant_records',
         'action_text_rich_texts',
         'action_mailbox_inbound_emails',
-        'versions'
+        'action_mailbox_routing_rules'
       ]
-      excluded_tables.include?(table_name) ||
-      table_name.end_with?('_versions')
+      
+      excluded_tables.include?(table_name) || table_name.start_with?('active_storage_') || table_name.start_with?('action_text_')
     end
   end
 end

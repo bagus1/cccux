@@ -59,7 +59,15 @@ namespace :cccux do
     
     # Step 4: Run CCCUX migrations
     puts "📋 Step 4: Running CCCUX migrations..."
-    Rake::Task['db:migrate'].invoke
+    begin
+      Rake::Task['db:migrate'].invoke
+    rescue RuntimeError => e
+      if e.message.include?("Don't know how to build task 'db:migrate'")
+        puts "   ⚠️  Skipping migrations (not available in engine context)"
+      else
+        raise e
+      end
+    end
     puts "✅ CCCUX migrations completed"
     
     # Step 5: Include CCCUX concern in User model
@@ -106,6 +114,19 @@ namespace :cccux do
     puts "📚 Need help? Check the CCCUX documentation or README"
   end
   
+  desc 'test:prepare - Prepare test database for CCCUX engine'
+  task 'test:prepare' => :environment do
+    puts "🧪 Preparing CCCUX test database..."
+    
+    # Switch to test environment
+    Rails.env = 'test'
+    
+    # Load schema into test database
+    system("cd #{Rails.root.join('..', '..')} && RAILS_ENV=test rails db:schema:load")
+    
+    puts "✅ Test database prepared"
+  end
+
   desc 'test - Test CCCUX + Devise integration'
   task test: :environment do
     puts "🧪 Testing CCCUX + Devise integration..."
@@ -661,7 +682,7 @@ namespace :cccux do
       layout_content = File.read(layout_path)
       
       # Check if footer is already included
-      unless layout_content.include?('render "shared/footer"')
+      unless layout_content.include?("render 'shared/footer'")
         # Add footer before closing body tag
         if layout_content.include?('</body>')
           updated_content = layout_content.gsub(

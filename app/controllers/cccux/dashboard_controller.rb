@@ -19,16 +19,6 @@ module Cccux
       @missing_models = @detected_models - @existing_models
       @actions = %w[read create update destroy]
       
-      # Debug logging
-      Rails.logger.info "DEBUG: Detected models: #{@detected_models.inspect}"
-      Rails.logger.info "DEBUG: Existing models: #{@existing_models.inspect}"
-      Rails.logger.info "DEBUG: Missing models: #{@missing_models.inspect}"
-      
-      # Additional debug for web context
-      Rails.logger.info "DEBUG: Controller context - detected count: #{@detected_models.count}"
-      Rails.logger.info "DEBUG: Controller context - missing count: #{@missing_models.count}"
-      Rails.logger.info "DEBUG: Controller context - Order in detected? #{@detected_models.include?('Order')}"
-      Rails.logger.info "DEBUG: Controller context - Order in existing? #{@existing_models.include?('Order')}"
     end
 
     def sync_permissions
@@ -57,7 +47,7 @@ module Cccux
       
       if added_permissions.any?
         redirect_to cccux.model_discovery_path, 
-                   notice: "Successfully added #{added_permissions.count} permissions for #{models_to_add.count} models!"
+                   notice: "Successfully added #{added_permissions.count} permissions for #{models_to_add.count} models! For each of these models, you'll probably want to add 'load_and_authorize_resource' to the controller."
       else
         redirect_to cccux.model_discovery_path, 
                    alert: "No new permissions were added. Models may already have permissions."
@@ -76,7 +66,6 @@ module Cccux
       
       begin
         # Direct approach: Get models from database tables (bypasses all autoloading issues)
-        Rails.logger.info "Detecting models from database tables..."
         
         application_tables = ActiveRecord::Base.connection.tables.reject do |table|
           # Skip Rails internal tables and CCCUX tables
@@ -84,7 +73,6 @@ module Cccux
           skip_table?(table)
         end
         
-        Rails.logger.info "Found application tables: #{application_tables}"
         
         application_tables.each do |table|
           # Convert table name to model name
@@ -98,17 +86,14 @@ module Cccux
                  model_class.table_name == table &&
                  !skip_model_by_name?(model_name)
                 models << model_name
-                Rails.logger.info "✅ Found model: #{model_name} (table: #{table})"
               end
             else
               # Model constant doesn't exist yet, but table does - likely a valid model
               unless skip_model_by_name?(model_name)
                 models << model_name
-                Rails.logger.info "✅ Found model from table: #{model_name} (table: #{table})"
               end
             end
           rescue => e
-            Rails.logger.debug "Skipped table #{table}: #{e.message}"
           end
         end
         

@@ -1,11 +1,15 @@
 class Cccux::UsersController < Cccux::CccuxController
-  # Ensure only Role Managers can access user management
-  before_action :ensure_role_manager
+  # Restore load_and_authorize_resource for User
+  load_and_authorize_resource class: User
   
-  before_action :set_user, only: [:show, :edit, :update, :destroy]
+  # Add simple authentication check - user must be signed in
+  before_action :require_authentication
+  
+  # Remove manual set_user - let load_and_authorize_resource handle it
+  # before_action :set_user, only: [:show, :edit, :update, :destroy]
   
   def index
-    @users = User.includes(:cccux_roles).order(:email)
+    # Do not override @users, let load_and_authorize_resource scope it
     @roles = Cccux::Role.active.order(:name)
   end
   
@@ -102,11 +106,22 @@ class Cccux::UsersController < Cccux::CccuxController
   
   private
   
-  def set_user
-    @user = User.find(params[:id])
+  def require_authentication
+    unless user_signed_in?
+      respond_to do |format|
+        format.html { render plain: "Access denied", status: :forbidden }
+        format.json { render json: { error: 'Access denied' }, status: :forbidden }
+      end
+      return
+    end
   end
   
+  # Remove set_user method - load_and_authorize_resource handles this
+  # def set_user
+  #   @user = User.find(params[:id])
+  # end
+  
   def user_params
-    params.require(:user).permit(:email, :password, :password_confirmation)
+    params.require(:user).permit(:email, :password, :password_confirmation, :first_name, :last_name)
   end
 end 

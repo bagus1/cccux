@@ -15,7 +15,7 @@ module Cccux
 
     # Instance methods for user authorization
     def has_role?(role_name)
-      cccux_roles.active.exists?(name: role_name)
+      cccux_user_roles.active.joins(:role).where(cccux_roles: { name: role_name }).exists?
     end
 
     def has_any_role?(*role_names)
@@ -59,7 +59,7 @@ module Cccux
     end
 
     def role_names
-      cccux_roles.active.pluck(:name)
+      cccux_user_roles.active.joins(:role).pluck('cccux_roles.name')
     end
 
     def highest_priority_role

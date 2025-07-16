@@ -29,7 +29,14 @@ module Cccux
     
     private
     
+    def devise_controller?
+      # Only return true if Devise is available and this is a Devise controller
+      defined?(Devise) && respond_to?(:devise_controller?) ? super : false
+    end
+    
     def configure_permitted_parameters
+      return unless defined?(Devise) && respond_to?(:devise_parameter_sanitizer)
+      
       devise_parameter_sanitizer.permit(:sign_up, keys: [:first_name, :last_name])
       devise_parameter_sanitizer.permit(:account_update, keys: [:first_name, :last_name])
     end

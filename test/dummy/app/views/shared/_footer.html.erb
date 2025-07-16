@@ -1,0 +1,88 @@
+<!-- CCCUX Footer - Added by CCCUX setup -->
+<footer class="cccux-footer" style="margin-top: 2rem; padding: 1rem 0; border-top: 1px solid #e5e5e5; background-color: #f8f9fa;">
+  <div class="container">
+    <div class="row">
+      <div class="col-md-6">
+        <nav class="footer-nav">
+          <a href="<%= main_app.root_path %>" class="footer-link">🏠 Home</a>
+          <% if user_signed_in? && current_user.has_role?('Role Manager') %>
+            <span class="footer-separator">|</span>
+            <a href="<%= cccux.root_path %>" class="footer-link">⚙️ CCCUX Admin</a>
+          <% end %>
+        </nav>
+      </div>
+      <div class="col-md-6 text-end">
+        <% if user_signed_in? %>
+          <span class="user-info">
+            👤 <strong><%= current_user.email %></strong>
+            <span class="footer-separator">|</span>
+            <%= link_to "🚪 Logout", main_app.destroy_user_session_path, 
+                method: :delete, 
+                class: "footer-link",
+                data: { turbo_method: :delete } %>
+          </span>
+        <% else %>
+          <span class="auth-links">
+            <%= link_to "🔑 Sign In", main_app.new_user_session_path, class: "footer-link" %>
+            <span class="footer-separator">|</span>
+            <%= link_to "📝 Sign Up", main_app.new_user_registration_path, class: "footer-link" %>
+          </span>
+        <% end %>
+      </div>
+    </div>
+  </div>
+</footer>
+
+<style>
+  .cccux-footer {
+    font-size: 0.9rem;
+    color: #6c757d;
+  }
+  .cccux-footer .footer-link {
+    color: #007bff;
+    text-decoration: none;
+    margin: 0 0.5rem;
+  }
+  .cccux-footer .footer-link:hover {
+    color: #0056b3;
+    text-decoration: underline;
+  }
+  .cccux-footer .footer-separator {
+    color: #dee2e6;
+    margin: 0 0.25rem;
+  }
+  .cccux-footer .user-info,
+  .cccux-footer .auth-links {
+    font-size: 0.85rem;
+  }
+  .cccux-footer .container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 1rem;
+  }
+  .cccux-footer .row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+  }
+  .cccux-footer .col-md-6 {
+    flex: 1;
+    min-width: 300px;
+  }
+  .cccux-footer .text-end {
+    text-align: right;
+  }
+  @media (max-width: 768px) {
+    .cccux-footer .row {
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+    .cccux-footer .col-md-6 {
+      text-align: center;
+    }
+    .cccux-footer .text-end {
+      text-align: center;
+    }
+  }
+</style>

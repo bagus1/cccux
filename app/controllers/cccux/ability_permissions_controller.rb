@@ -1,7 +1,5 @@
 module Cccux
   class AbilityPermissionsController < CccuxController
-    # Ensure only Role Managers can access permission management
-    before_action :ensure_role_manager
 
     before_action :set_ability_permission, only: [:show, :edit, :update, :destroy]
 
@@ -112,14 +110,10 @@ module Cccux
     def create_single_permission
       @ability_permission = Cccux::AbilityPermission.new(ability_permission_params)
       
-      if @ability_permission.save
-        redirect_to cccux.ability_permissions_path, notice: 'Permission was successfully created.'
-      else
-        @available_subjects = get_available_subjects
-        @available_actions = get_available_actions
-        @subject_actions_map = get_subject_actions_map
-        render :new
+      unless @ability_permission.save
+        raise "AbilityPermission creation failed: \n#{@ability_permission.errors.full_messages.join(', ')}"
       end
+      redirect_to cccux.ability_permissions_path, notice: 'Permission was successfully created.'
     end
 
     def get_available_subjects

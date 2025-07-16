@@ -2,9 +2,9 @@
 
 module Cccux
   class Ability
-    include CanCan::Ability
+  include CanCan::Ability
 
-    def initialize(user, context = nil)
+  def initialize(user, context = nil)
       user ||= User.new # guest user (not logged in)
       @context = context || {}
       
@@ -60,24 +60,33 @@ module Cccux
     def apply_access_ability(role_ability, permission, model_class, user)
       action = permission.action.to_sym
       
+      # Handle action aliases (read includes show and index)
+      actions_to_grant = case action
+      when :read
+        [:read, :show, :index]
+      when :update
+        [:update, :edit]
+      when :create
+        [:create, :new]
+      when :destroy
+        [:destroy, :delete]
+      else
+        [action]
+      end
+      
       # For User resource, keep owned logic for now
       if permission.subject == 'User'
-        if role_ability.context == 'owned' || (role_ability.owned && user&.persisted?)
-          apply_owned_ability(action, model_class, user, role_ability)
+        if role_ability.context == 'owned' || role_ability.owned
+          actions_to_grant.each { |act| apply_owned_ability(act, model_class, user, role_ability) }
         else
-          can action, model_class
+          actions_to_grant.each { |act| can act, model_class }
         end
       else
-        # For all other resources, use global/owned (contextual is now handled by owned with configuration)
-        case role_ability.access_type
-        when 'global'
-          can action, model_class
-        when 'owned'
-          apply_owned_ability(action, model_class, user, role_ability)
+        # For all other resources, use global/owned logic based on context field
+        if role_ability.context == 'owned' || role_ability.owned
+          actions_to_grant.each { |act| apply_owned_ability(act, model_class, user, role_ability) }
         else
-          # Default: deny access if access_type is not recognized
-          Rails.logger.warn "CCCUX: Unknown access_type '#{role_ability.access_type}' for #{model_class.name}, denying access"
-          # Don't grant any permissions - CanCanCan denies by default
+          actions_to_grant.each { |act| can act, model_class }
         end
       end
     end
@@ -89,13 +98,31 @@ module Cccux
         if ownership_model && user&.persisted?
           # Parse conditions (should be a JSON string or nil)
           conditions = role_ability.ownership_conditions.present? ? JSON.parse(role_ability.ownership_conditions) : {}
-          foreign_key = conditions["foreign_key"] || (model_class.name.foreign_key)
+          foreign_key = conditions["foreign_key"]
           user_key = conditions["user_key"] || "user_id"
-          # Find all records owned by user via the join model
-          owned_ids = ownership_model.where(user_key => user.id).pluck(foreign_key)
-          can action, model_class, id: owned_ids if owned_ids.any?
+          
+          # Require foreign_key to be explicitly specified when using ownership model
+          if foreign_key.present?
+            # Find all records owned by user via the join model
+            owned_ids = ownership_model.where(user_key => user.id).pluck(foreign_key)
+            if owned_ids.any?
+              # Check if the target model has the foreign key column
+              if model_class.column_names.include?(foreign_key)
+                # Direct ownership: model has the foreign key (e.g., Comment has post_id)
+                can action, model_class, foreign_key.to_sym => owned_ids
+              else
+                # Indirect ownership: model doesn't have the foreign key, use primary key
+                # This means the foreign key in the join table refers to the target model's primary key
+                can action, model_class, id: owned_ids
+              end
+            else
+              can action, model_class, id: []
+            end
+          else
+            # Fall back to no access if foreign_key is not specified
+            can action, model_class, id: []
+          end
         else
-          Rails.logger.warn "CCCUX: Invalid ownership_source #{role_ability.ownership_source} for #{model_class.name}"
           can action, model_class, id: []
         end
       # 2. Model custom owned_by?
@@ -112,30 +139,53 @@ module Cccux
         else
           can action, model_class, scoped_records
         end
-      # 4. Standard user_id
+      # 4. Special case for User model (self-ownership)
+      elsif model_class == User
+        can action, model_class, id: user.id
+      # 5. Standard user_id
       elsif model_class.column_names.include?('user_id')
         can action, model_class, user_id: user.id
-      # 5. Standard creator_id
+      # 6. Standard creator_id
       elsif model_class.column_names.include?('creator_id')
         can action, model_class, creator_id: user.id
+      # 7. Dynamic ownership check for individual records
       else
-        # Default: deny access when no ownership pattern is found
-        Rails.logger.warn "CCCUX: No ownership pattern found for #{model_class.name}, denying access"
-        # Don't grant any permissions - CanCanCan denies by default
+        # For cases where we need to check individual record attributes
+        can action, model_class do |record|
+          if record.respond_to?(:creator_id)
+            record.creator_id == user.id
+          elsif record.respond_to?(:user_id)
+            record.user_id == user.id
+          else
+            false
+          end
+        end
       end
     end
 
     def resolve_model_class(subject)
-      # Handle namespaced models
-      if subject.include?('::')
-        subject.constantize
+      # Try to resolve the model class in a robust way
+      candidates = []
+      if subject.include?("::")
+        candidates << subject
+        candidates << subject.split("::").last
       else
-        # Try to find the model in the host app
-        Object.const_get(subject)
+        candidates << subject
+        candidates << "Cccux::#{subject}"
       end
-    rescue NameError
-      # If the model doesn't exist, we can't define permissions for it
-      Rails.logger.warn "CCCUX: Model '#{subject}' not found, skipping permission"
+      
+      # Add more candidates for common patterns
+      candidates << subject.split("::").last if subject.include?("::")
+      candidates << subject.gsub("Cccux::", "") if subject.start_with?("Cccux::")
+      
+      candidates.each do |candidate|
+        begin
+          klass = candidate.constantize
+          return klass
+        rescue NameError => e
+          next
+        end
+      end
       nil
     end
   end

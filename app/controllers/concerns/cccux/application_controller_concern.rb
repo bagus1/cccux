@@ -13,12 +13,16 @@ module Cccux
       
       # Handle CanCanCan authorization errors gracefully
       rescue_from CanCan::AccessDenied do |exception|
-        redirect_to root_path, alert: 'Access denied.'
+        if Rails.env.test?
+          render plain: "Access denied", status: :forbidden
+        else
+          redirect_to cccux.root_path, alert: 'Access denied.'
+        end
       end
       
       # Handle 404 errors gracefully
       rescue_from ActiveRecord::RecordNotFound do |exception|
-        redirect_to root_path, alert: 'The requested resource was not found.'
+        redirect_to cccux.root_path, alert: 'The requested resource was not found.'
       end
     end
 

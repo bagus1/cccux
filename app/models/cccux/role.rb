@@ -9,10 +9,11 @@ module Cccux
     has_many :role_abilities, dependent: :destroy, class_name: 'Cccux::RoleAbility'
     has_many :ability_permissions, through: :role_abilities, class_name: 'Cccux::AbilityPermission'
     
-    validates :name, presence: true, uniqueness: true
+    validates :name, presence: true
     validates :priority, presence: true, numericality: { only_integer: true, greater_than: 0 }
     
     after_initialize :set_default_priority, if: :new_record?
+    validate :name_uniqueness_case_insensitive
     
     scope :active, -> { where(active: true) }
     scope :ordered, -> { order(:priority, :name) }
@@ -78,6 +79,23 @@ module Cccux
         'owned'
       else
         nil
+      end
+    end
+    
+    # Generate slug from name
+    def slug
+      name.parameterize.underscore if name.present?
+    end
+    
+    # Case insensitive name validation
+    def name_uniqueness_case_insensitive
+      return unless name.present?
+      
+      existing_role = self.class.where('LOWER(name) = ?', name.downcase)
+      existing_role = existing_role.where.not(id: id) if persisted?
+      
+      if existing_role.exists?
+        errors.add(:name, 'has already been taken')
       end
     end
     
