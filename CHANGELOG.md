@@ -5,6 +5,48 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.1] - 2025-01-27
+
+### Added
+- **Multi-level Ownership Support**: Enhanced ownership system to support ownership chains (e.g., ProjectManager → Project → Task)
+- **Improved Model Discovery**: Enhanced model discovery to include all application models in role editing interface
+- **Enhanced Authorization Logic**: Improved Ability class to handle complex ownership relationships correctly
+- **Project Management Integration**: Added support for Project, Task, and ProjectManager models with proper authorization
+- **Comprehensive Test Coverage**: Added extensive test coverage for all major components and edge cases
+
+### Fixed
+- **Model Loading Issues**: Fixed Zeitwerk autoloading issues with empty model files
+- **Ownership Chain Logic**: Fixed ownership checking logic to properly traverse ownership relationships
+- **User Registration**: Fixed ActiveModel::UnknownAttributeError during user signup process
+- **Permission Inheritance**: Corrected permission inheritance for project managers and task ownership
+- **Debug Output Removal**: Cleaned up all debug output statements from production code
+- **Test Assertion Warnings**: Fixed auto-generated test methods and missing HTTP requests in tests
+
+### Technical Improvements
+- **Enhanced Test Coverage**: Improved test coverage for complex ownership scenarios
+- **Better Error Handling**: Enhanced error handling for missing models and invalid ownership configurations
+- **Performance Optimizations**: Improved model loading and authorization checking performance
+- **Code Quality**: Removed all debug statements and improved code organization
+
+## [0.1.2] - 2025-01-27
+
+### Added
+- **Multi-level Ownership Support**: Enhanced ownership system to support ownership chains (e.g., ProjectManager → Project → Task)
+- **Improved Model Discovery**: Enhanced model discovery to include all application models in role editing interface
+- **Enhanced Authorization Logic**: Improved Ability class to handle complex ownership relationships correctly
+- **Project Management Integration**: Added support for Project, Task, and ProjectManager models with proper authorization
+
+### Fixed
+- **Model Loading Issues**: Fixed Zeitwerk autoloading issues with empty model files
+- **Ownership Chain Logic**: Fixed ownership checking logic to properly traverse ownership relationships
+- **User Registration**: Fixed ActiveModel::UnknownAttributeError during user signup process
+- **Permission Inheritance**: Corrected permission inheritance for project managers and task ownership
+
+### Technical Improvements
+- **Enhanced Test Coverage**: Improved test coverage for complex ownership scenarios
+- **Better Error Handling**: Enhanced error handling for missing models and invalid ownership configurations
+- **Performance Optimizations**: Improved model loading and authorization checking performance
+
 ## [0.1.1] - 2025-07-07
 
 ### Added
