@@ -4,7 +4,7 @@
  * This file contains styles for the CCCUX engine components.
  */
 
-/* Basic styling for CCCUX admin interface */
+/* CCCUX Admin Styles */
 .cccux-admin {
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
   line-height: 1.6;
@@ -54,4 +54,73 @@
 .cccux-admin th {
   background: #f8f9fa;
   font-weight: 600;
+}
+
+/* CCCUX Footer Styles */
+.cccux-footer {
+  font-size: 0.9rem;
+  color: #6c757d;
+  margin-top: 2rem;
+  padding: 1rem 0;
+  border-top: 1px solid #e5e5e5;
+  background-color: #f8f9fa;
+}
+
+.cccux-footer .footer-link {
+  color: #red;
+  text-decoration: none;
+  margin: 0 0.5rem;
+
+}
+
+.cccux-footer .footer-link:hover {
+  color: #0056b3;
+  text-decoration: underline;
+}
+
+.cccux-footer .footer-separator {
+  color: #dee2e6;
+  margin: 0 0.25rem;
+}
+
+.cccux-footer .user-info,
+.cccux-footer .auth-links {
+  font-size: 0.85rem;
+}
+
+.cccux-footer .container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 1rem;
+}
+
+.cccux-footer .row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.cccux-footer .col-md-6 {
+  flex: 1;
+  min-width: 300px;
+}
+
+.cccux-footer .text-end {
+  text-align: right;
+}
+
+@media (max-width: 768px) {
+  .cccux-footer .row {
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .cccux-footer .col-md-6 {
+    text-align: center;
+  }
+
+  .cccux-footer .text-end {
+    text-align: center;
+  }
 }

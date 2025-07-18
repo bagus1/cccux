@@ -580,10 +580,10 @@ namespace :cccux do
     
     footer_path = shared_dir.join('_footer.html.erb')
     
-    # Create footer content
+    # Create footer content - Updated to use Devise helpers
     footer_content = <<~ERB
-      <!-- CCCUX Footer - Added by CCCUX setup -->
-      <footer class="cccux-footer" style="margin-top: 2rem; padding: 1rem 0; border-top: 1px solid #e5e5e5; background-color: #f8f9fa;">
+      <!-- CCCUX Footer - Updated to use Devise helpers -->
+      <footer class="cccux-footer">
         <div class="container">
           <div class="row">
             <div class="col-md-6">
@@ -591,7 +591,7 @@ namespace :cccux do
                 <a href="<%= main_app.root_path %>" class="footer-link">🏠 Home</a>
                 <% if user_signed_in? && current_user.has_role?('Role Manager') %>
                   <span class="footer-separator">|</span>
-                  <a href="<%= cccux.root_path %>" class="footer-link">⚙️ CCCUX Admin</a>
+                  <a href="/cccux" class="footer-link">⚙️ CCCUX Admin</a>
                 <% end %>
               </nav>
             </div>
@@ -616,67 +616,17 @@ namespace :cccux do
           </div>
         </div>
       </footer>
-
-      <style>
-        .cccux-footer {
-          font-size: 0.9rem;
-          color: #6c757d;
-        }
-        .cccux-footer .footer-link {
-          color: #007bff;
-          text-decoration: none;
-          margin: 0 0.5rem;
-        }
-        .cccux-footer .footer-link:hover {
-          color: #0056b3;
-          text-decoration: underline;
-        }
-        .cccux-footer .footer-separator {
-          color: #dee2e6;
-          margin: 0 0.25rem;
-        }
-        .cccux-footer .user-info,
-        .cccux-footer .auth-links {
-          font-size: 0.85rem;
-        }
-        .cccux-footer .container {
-          max-width: 1200px;
-          margin: 0 auto;
-          padding: 0 1rem;
-        }
-        .cccux-footer .row {
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-          flex-wrap: wrap;
-        }
-        .cccux-footer .col-md-6 {
-          flex: 1;
-          min-width: 300px;
-        }
-        .cccux-footer .text-end {
-          text-align: right;
-        }
-        @media (max-width: 768px) {
-          .cccux-footer .row {
-            flex-direction: column;
-            gap: 0.5rem;
-          }
-          .cccux-footer .col-md-6 {
-            text-align: center;
-          }
-          .cccux-footer .text-end {
-            text-align: center;
-          }
-        }
-      </style>
     ERB
     
     # Write the footer partial
     File.write(footer_path, footer_content)
-    puts "   ✅ Created footer partial at #{footer_path}"
+    puts "✅ Created footer partial at #{footer_path}"
     
-    # Also create a simple include instruction for the application layout
+    # Include footer in application layout
+    include_footer_in_layout
+  end
+
+  def include_footer_in_layout
     layout_path = Rails.root.join('app', 'views', 'layouts', 'application.html.erb')
     if File.exist?(layout_path)
       layout_content = File.read(layout_path)
@@ -690,15 +640,15 @@ namespace :cccux do
             "\\1  <%= render 'shared/footer' %>\n\\1</body>"
           )
           File.write(layout_path, updated_content)
-          puts "   ✅ Added footer to application layout"
+          puts "✅ Added footer to application layout"
         else
-          puts "   ⚠️  Could not find </body> tag in application layout - please manually add: <%= render 'shared/footer' %>"
+          puts "⚠️  Could not find </body> tag in application layout - please manually add: <%= render 'shared/footer' %>"
         end
       else
-        puts "   ℹ️  Footer already included in application layout"
+        puts "ℹ️  Footer already included in application layout"
       end
     else
-      puts "   ⚠️  Application layout not found - please manually add: <%= render 'shared/footer' %>"
+      puts "⚠️  Application layout not found - please manually add: <%= render 'shared/footer' %>"
     end
   end
 
