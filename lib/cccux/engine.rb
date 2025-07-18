@@ -24,22 +24,17 @@ module Cccux
       load 'tasks/cccux.rake'
     end
     
-    # Configure assets for both Sprockets and Propshaft
+    # Configure assets for Propshaft (Rails 8 default)
     initializer "cccux.assets" do |app|
-      # Add asset paths (same as MegaBar)
-      app.config.assets.paths << root.join("app", "assets", "javascripts")
-      app.config.assets.paths << root.join("app", "assets", "stylesheets")
-      app.config.assets.paths << root.join("app", "assets", "images")
-      
-      # For Propshaft, ensure engine assets are available
+      # For Propshaft, add the engine's asset directory to the load path
       if defined?(Propshaft)
         app.config.assets.paths << root.join('app', 'assets')
+      else
+        # Fallback for Sprockets if needed
+        app.config.assets.paths << root.join("app", "assets", "javascripts")
+        app.config.assets.paths << root.join("app", "assets", "stylesheets")
+        app.config.assets.paths << root.join("app", "assets", "images")
       end
-    end
-    
-    # Define assets for precompilation
-    initializer "cccux.assets.precompile" do |app|
-      app.config.assets.precompile += %w( cccux/application.css )
     end
     
     # Include helpers in host application only when mounted

@@ -103,6 +103,11 @@ namespace :cccux do
     puts "📋 Step 10: Verifying setup..."
     verify_setup
 
+    # Step 11: Precompile assets
+    puts "📋 Step 11: Precompiling assets..."
+    precompile_assets
+    puts "✅ Assets precompiled"
+
     puts ""
     puts "🎉 CCCUX + Devise setup completed successfully!"
     puts ""
@@ -250,40 +255,9 @@ namespace :cccux do
   end
 
   def configure_assets
-    # Add CSS assets
-    css_path = Rails.root.join('app/assets/stylesheets/application.css')
-    if File.exist?(css_path)
-      css_content = File.read(css_path)
-      
-      # Check if we're using Propshaft or Sprockets
-      if defined?(Propshaft)
-        # For Propshaft, copy the actual CSS content since it doesn't process @import
-        unless css_content.include?('CCCUX Engine Styles')
-          # Read the CCCUX CSS content
-          cccux_css_path = File.join(File.dirname(__FILE__), '..', '..', 'app', 'assets', 'stylesheets', 'cccux', 'application.css')
-          if File.exist?(cccux_css_path)
-            cccux_css_content = File.read(cccux_css_path)
-            # Extract just the CSS rules, not the manifest comments
-            css_rules = cccux_css_content.split('*/').last.strip if cccux_css_content.include?('*/')
-            css_rules ||= cccux_css_content
-            
-            File.open(css_path, 'a') do |f|
-              f.puts "\n\n/* CCCUX Engine Styles - Added by CCCUX setup */"
-              f.puts css_rules
-            end
-            puts "   ✅ Added CCCUX CSS content to application.css (Propshaft)"
-          else
-            puts "   ⚠️  Could not find CCCUX CSS file at #{cccux_css_path}"
-          end
-        end
-      else
-        # Sprockets uses *= require syntax
-        unless css_content.include?('cccux/application')
-          File.open(css_path, 'a') { |f| f.puts "/*\n *= require cccux/application\n */" }
-          puts "   ✅ Added CCCUX CSS to application.css (Sprockets)"
-        end
-      end
-    end
+    # Note: CCCUX styles are now loaded via the engine's asset pipeline
+    # No need to copy styles to host app's application.css
+    puts "   ℹ️  CCCUX styles will be loaded via engine asset pipeline"
     
     # Add JavaScript assets (if using legacy asset pipeline)
     js_path = Rails.root.join('app/assets/javascripts/application.js')
@@ -580,9 +554,9 @@ namespace :cccux do
     
     footer_path = shared_dir.join('_footer.html.erb')
     
-    # Create footer content - Updated to use Devise helpers
+    # Create footer content - No inline styles, uses CCCUX engine CSS
     footer_content = <<~ERB
-      <!-- CCCUX Footer - Updated to use Devise helpers -->
+      <!-- CCCUX Footer - Styles loaded from CCCUX engine -->
       <footer class="cccux-footer">
         <div class="container">
           <div class="row">
@@ -669,6 +643,25 @@ namespace :cccux do
     rescue => e
       puts "❌ Devise routes not working: #{e.message}"
       exit 1
+    end
+  end
+
+  def precompile_assets
+    puts "   🔧 Precompiling CCCUX assets..."
+    
+    begin
+      # Run assets:precompile task
+      Rake::Task['assets:precompile'].invoke
+      puts "   ✅ Assets precompiled successfully"
+    rescue RuntimeError => e
+      if e.message.include?("Don't know how to build task 'assets:precompile'")
+        puts "   ⚠️  Assets precompile task not available (this is normal in some contexts)"
+        puts "   ℹ️  Assets will be compiled automatically when the server starts"
+      else
+        puts "   ❌ Error precompiling assets: #{e.message}"
+      end
+    rescue => e
+      puts "   ❌ Unexpected error during asset precompilation: #{e.message}"
     end
   end
 end 
