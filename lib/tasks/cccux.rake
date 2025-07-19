@@ -4,7 +4,7 @@
 require 'fileutils'
 
 namespace :cccux do
-  desc 'setup - Complete setup for CCCUX with Devise integration'
+  desc 'setup - Complete setup for CCCUX (requires manual Devise installation first)'
   task setup: :environment do
     puts "🚀 Starting CCCUX + Devise setup..."
     
@@ -42,27 +42,15 @@ namespace :cccux do
         puts "💡 Devise will be fully loaded after server restart"
       end
     else
-      puts "❌ Devise is not properly installed or configured."
-      puts "🚀 Automatically installing Devise..."
-      
-      # Install Devise gem
-      puts "   📦 Adding Devise to Gemfile..."
-      system("bundle add devise")
-      
-      # Generate Devise install
-      puts "   ⚙️  Running Devise install..."
-      system("rails generate devise:install")
-      
-      # Generate Devise User model
-      puts "   👤 Generating Devise User model..."
-      system("rails generate devise User")
-      
-      # Run migrations
-      puts "   🗄️  Running database migrations..."
-      system("rails db:migrate")
-      
-      puts "✅ Devise installation completed!"
-      puts "💡 Devise files have been created and will be fully loaded after server restart"
+      puts "🚀 Please install Devise manually with this command:"
+      puts ""
+      puts "   bundle add devise && rails generate devise:install && rails generate devise User && rails db:migrate"
+      puts ""
+      puts "   Afterwards, run cccux:setup again."
+      puts ""
+      puts "   rails cccux:setup"
+      puts ""
+      exit 1
     end
     
     puts "✅ Devise is properly installed"
@@ -138,7 +126,7 @@ namespace :cccux do
     puts "✅ Assets precompiled"
 
     puts ""
-    puts "🎉 CCCUX + Devise setup completed successfully!"
+    puts "🎉 CCCUX setup completed successfully!"
     puts ""
     puts "🌟 Next steps:"
     puts "   1. Start your Rails server: rails server"
