@@ -47,18 +47,27 @@ namespace :cccux do
     
     puts "✅ Devise is properly installed"
     
-    # Step 2: Configure routes
-    puts "📋 Step 2: Configuring routes..."
+    # Step 2: Verify Devise is using default controllers
+    puts "📋 Step 2: Verifying Devise configuration..."
+    if Dir.exist?(Rails.root.join('app', 'controllers', 'users'))
+      puts "   ⚠️  Custom Devise controllers detected - these may cause conflicts"
+      puts "   ℹ️  Using default Devise controllers is recommended for stability"
+    else
+      puts "   ✅ Using default Devise controllers (recommended)"
+    end
+    
+    # Step 3: Configure routes
+    puts "📋 Step 3: Configuring routes..."
     configure_routes
     puts "✅ Routes configured"
     
-    # Step 3: Configure assets
-    puts "📋 Step 3: Configuring assets..."
+    # Step 4: Configure assets
+    puts "📋 Step 4: Configuring assets..."
     configure_assets
     puts "✅ Assets configured"
     
-    # Step 4: Run CCCUX migrations
-    puts "📋 Step 4: Running CCCUX migrations..."
+    # Step 5: Run CCCUX migrations
+    puts "📋 Step 5: Running CCCUX migrations..."
     begin
       Rake::Task['db:migrate'].invoke
     rescue RuntimeError => e
@@ -70,41 +79,41 @@ namespace :cccux do
     end
     puts "✅ CCCUX migrations completed"
     
-    # Step 5: Include CCCUX concern in User model
-    puts "📋 Step 5: Adding CCCUX to User model..."
+    # Step 6: Include CCCUX concern in User model
+    puts "📋 Step 6: Adding CCCUX to User model..."
     include_cccux_concern
     puts "✅ CCCUX concern added to User model"
     
-    # Step 5.5: Configure ApplicationController with CCCUX
-    puts "📋 Step 5.5: Configuring ApplicationController with CCCUX..."
+    # Step 7: Configure ApplicationController with CCCUX
+    puts "📋 Step 7: Configuring ApplicationController with CCCUX..."
     configure_application_controller
     puts "✅ ApplicationController configured with CCCUX"
     
-    # Step 6: Create initial roles and permissions
-    puts "📋 Step 6: Creating initial roles and permissions..."
+    # Step 8: Create initial roles and permissions
+    puts "📋 Step 8: Creating initial roles and permissions..."
     create_default_roles_and_permissions
     puts "✅ Default roles and permissions created"
     
-    # Step 7: Create default admin user (if no users exist)
-    puts "📋 Step 7: Creating default admin user..."
+    # Step 9: Create default admin user (if no users exist)
+    puts "📋 Step 9: Creating default admin user..."
     create_default_admin_user
     
-        # Step 8: Create footer partial
-    puts "📋 Step 8: Creating footer partial..."
+    # Step 10: Create footer partial
+    puts "📋 Step 10: Creating footer partial..."
     create_footer_partial
     puts "✅ Footer partial created"
     
-    # Step 9: Create home controller if needed
-    puts "📋 Step 9: Checking for home controller..."
+    # Step 11: Create home controller if needed
+    puts "📋 Step 11: Checking for home controller..."
     create_home_controller
     puts "✅ Home controller check completed"
     
-    # Step 10: Verify setup
-    puts "📋 Step 10: Verifying setup..."
+    # Step 12: Verify setup
+    puts "📋 Step 12: Verifying setup..."
     verify_setup
 
-    # Step 11: Precompile assets
-    puts "📋 Step 11: Precompiling assets..."
+    # Step 13: Precompile assets
+    puts "📋 Step 13: Precompiling assets..."
     precompile_assets
     puts "✅ Assets precompiled"
 
@@ -235,12 +244,21 @@ namespace :cccux do
     routes_path = Rails.root.join('config/routes.rb')
     routes_content = File.read(routes_path)
     
+    # Check if Devise controllers exist
+    devise_controllers_exist = Dir.exist?(Rails.root.join('app', 'controllers', 'users'))
+    
     # Ensure devise_for :users is before engine mount
     unless routes_content.include?('devise_for :users')
       puts "   ➕ Adding devise_for :users to routes..."
       new_content = "Rails.application.routes.draw do\n  devise_for :users\n\n" + routes_content.lines[1..-1].join
       File.write(routes_path, new_content)
       routes_content = File.read(routes_path)
+    end
+    
+    # Ensure routes use default Devise controllers (recommended for stability)
+    if devise_controllers_exist
+      puts "   ⚠️  Custom Devise controllers detected - consider removing them for stability"
+      puts "   ℹ️  Routes will use default Devise controllers"
     end
     
     # Add engine mount if not present

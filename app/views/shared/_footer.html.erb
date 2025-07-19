@@ -20,7 +20,7 @@
         <span class="user-info">
           Welcome, <%= current_user.respond_to?(:first_name) ? current_user.first_name : current_user.email %>
         </span>
-        <%= link_to "Logout", main_app.destroy_user_session_path, method: :delete, class: "footer-link auth-link", data: { turbo_method: :delete } %>
+        <%= button_to "Logout", main_app.destroy_user_session_path, method: :delete, class: "footer-link auth-link", style: "background: none; border: none; color: #007bff; text-decoration: none; padding: 5px 10px; border-radius: 4px; transition: all 0.2s ease; font-weight: 500; cursor: pointer; font: inherit;" %>
       <% else %>
         <%= link_to "Login", main_app.new_user_session_path, class: "footer-link auth-link" %>
         <%= link_to "Sign Up", main_app.new_user_registration_path, class: "footer-link auth-link" %>
