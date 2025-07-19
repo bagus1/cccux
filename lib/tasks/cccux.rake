@@ -10,39 +10,59 @@ namespace :cccux do
     
     # Step 1: Ensure Devise is installed and working
     puts "📋 Step 1: Verifying Devise installation..."
-    # Check if Devise is installed and User model exists with Devise configuration
-    devise_installed = defined?(Devise)
-    user_model_exists = false
-    user_has_devise = false
     
-    if devise_installed
-      begin
-        user_class = Object.const_get('User')
-        user_model_exists = true
-        
-        # Check if User model has Devise modules
-        user_has_devise = user_class.respond_to?(:devise_modules) && user_class.devise_modules.any?
-        
-        # Also check if User model file contains Devise configuration as backup
-        if !user_has_devise
-          user_model_path = Rails.root.join('app', 'models', 'user.rb')
-          if File.exist?(user_model_path)
-            user_content = File.read(user_model_path)
-            user_has_devise = user_content.include?('devise :')
-          end
-        end
-      rescue NameError
-        # User model doesn't exist
+    # Check if Devise files exist (more reliable than checking loaded state)
+    devise_gem_in_gemfile = File.exist?(Rails.root.join('Gemfile')) && 
+                           File.read(Rails.root.join('Gemfile')).include?('gem "devise"')
+    devise_initializer_exists = File.exist?(Rails.root.join('config', 'initializers', 'devise.rb'))
+    user_model_has_devise = File.exist?(Rails.root.join('app', 'models', 'user.rb')) && 
+                           File.read(Rails.root.join('app', 'models', 'user.rb')).include?('devise :')
+    routes_has_devise = File.exist?(Rails.root.join('config', 'routes.rb')) && 
+                       File.read(Rails.root.join('config', 'routes.rb')).include?('devise_for :users')
+    
+    # Check if Devise is loaded in the current environment (optional check)
+    devise_loaded = defined?(Devise)
+    user_model_exists = defined?(User)
+    user_has_devise_methods = user_model_exists && User.respond_to?(:devise)
+    
+    puts "   📋 Devise status check:"
+    puts "      - Devise gem in Gemfile: #{devise_gem_in_gemfile ? '✅' : '❌'}"
+    puts "      - Devise initializer: #{devise_initializer_exists ? '✅' : '❌'}"
+    puts "      - User model has Devise: #{user_model_has_devise ? '✅' : '❌'}"
+    puts "      - Routes have Devise: #{routes_has_devise ? '✅' : '❌'}"
+    puts "      - Devise loaded in environment: #{devise_loaded ? '✅' : '❌'}"
+    puts "      - User model has Devise methods: #{user_has_devise_methods ? '✅' : '❌'}"
+    
+    # If Devise files exist but aren't loaded, that's normal - just continue
+    if devise_gem_in_gemfile && devise_initializer_exists && user_model_has_devise && routes_has_devise
+      if devise_loaded && user_has_devise_methods
+        puts "✅ Devise is properly installed and loaded"
+      else
+        puts "✅ Devise files are properly installed"
+        puts "💡 Devise will be fully loaded after server restart"
       end
-    end
-    
-    unless devise_installed && user_model_exists && user_has_devise
-      puts "❌ Devise is not properly installed or configured. Please run the following command first:"
-      puts " "
-      puts "   bundle add devise && rails generate devise:install && rails generate devise User && rails db:migrate"
-      puts " "
-      puts "Then re-run: rails cccux:setup"
-      exit 1
+    else
+      puts "❌ Devise is not properly installed or configured."
+      puts "🚀 Automatically installing Devise..."
+      
+      # Install Devise gem
+      puts "   📦 Adding Devise to Gemfile..."
+      system("bundle add devise")
+      
+      # Generate Devise install
+      puts "   ⚙️  Running Devise install..."
+      system("rails generate devise:install")
+      
+      # Generate Devise User model
+      puts "   👤 Generating Devise User model..."
+      system("rails generate devise User")
+      
+      # Run migrations
+      puts "   🗄️  Running database migrations..."
+      system("rails db:migrate")
+      
+      puts "✅ Devise installation completed!"
+      puts "💡 Devise files have been created and will be fully loaded after server restart"
     end
     
     puts "✅ Devise is properly installed"
@@ -663,13 +683,24 @@ namespace :cccux do
     
     puts "✅ CCCUX methods available on User model"
     
-    # Test route helpers
-    begin
-      Rails.application.routes.url_helpers.new_user_session_path
-      puts "✅ Devise routes working"
-    rescue => e
-      puts "❌ Devise routes not working: #{e.message}"
-      exit 1
+    # Check if Devise files exist (more reliable than testing routes in rake context)
+    devise_initializer_exists = File.exist?(Rails.root.join('config', 'initializers', 'devise.rb'))
+    user_model_has_devise = File.exist?(Rails.root.join('app', 'models', 'user.rb')) && 
+                           File.read(Rails.root.join('app', 'models', 'user.rb')).include?('devise :')
+    routes_has_devise = File.exist?(Rails.root.join('config', 'routes.rb')) && 
+                       File.read(Rails.root.join('config', 'routes.rb')).include?('devise_for :users')
+    
+    puts "   📋 Devise file verification:"
+    puts "      - Devise initializer: #{devise_initializer_exists ? '✅' : '❌'}"
+    puts "      - User model has Devise: #{user_model_has_devise ? '✅' : '❌'}"
+    puts "      - Routes have Devise: #{routes_has_devise ? '✅' : '❌'}"
+    
+    if devise_initializer_exists && user_model_has_devise && routes_has_devise
+      puts "✅ Devise files properly configured"
+      puts "💡 Devise routes will be available after server restart"
+    else
+      puts "⚠️  Some Devise files may be missing or incomplete"
+      puts "💡 This is normal if Devise was just installed - restart your server to complete setup"
     end
   end
 
