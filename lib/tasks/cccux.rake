@@ -646,9 +646,18 @@ namespace :cccux do
 
   def verify_setup
     # Test that User model has CCCUX methods
+    # First, try to reload the User model file to pick up the concern
+    begin
+      load Rails.root.join('app', 'models', 'user.rb')
+    rescue => e
+      puts "   ⚠️  Could not reload User model: #{e.message}"
+    end
+    
     user = User.new
     unless user.respond_to?(:has_role?)
       puts "❌ User model missing CCCUX methods"
+      puts "   💡 This sometimes happens on the first run. Try running 'rails cccux:setup' again."
+      puts "   🔧 The concern was added to the User model file, but Rails needs to reload it."
       exit 1
     end
     
