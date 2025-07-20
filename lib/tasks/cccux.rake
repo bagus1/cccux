@@ -4,7 +4,7 @@
 require 'fileutils'
 
 namespace :cccux do
-  desc 'setup - Complete setup for CCCUX (requires manual Devise installation first)'
+  desc 'setup - Complete setup for CCCUX with Devise integration'
   task setup: :environment do
     puts "🚀 Starting CCCUX + Devise setup..."
     
@@ -42,14 +42,10 @@ namespace :cccux do
         puts "💡 Devise will be fully loaded after server restart"
       end
     else
-      puts "🚀 Please install Devise manually with this command:"
-      puts ""
+      puts "❌ Devise is not properly installed or configured."
+      puts "run the following commands to install Devise: "
       puts "   bundle add devise && rails generate devise:install && rails generate devise User && rails db:migrate"
-      puts ""
-      puts "   Afterwards, run cccux:setup again."
-      puts ""
-      puts "   rails cccux:setup"
-      puts ""
+      puts "   then run: rails cccux:setup again after Devise is installed"
       exit 1
     end
     
@@ -126,7 +122,7 @@ namespace :cccux do
     puts "✅ Assets precompiled"
 
     puts ""
-    puts "🎉 CCCUX setup completed successfully!"
+    puts "🎉 CCCUX + Devise setup completed successfully!"
     puts ""
     puts "🌟 Next steps:"
     puts "   1. Start your Rails server: rails server"
@@ -244,6 +240,115 @@ namespace :cccux do
     ActiveRecord::Base.connection.execute("DROP TABLE IF EXISTS cccux_roles")
     
     puts "✅ CCCUX removed from application"
+  end
+
+  desc 'megabar:create_mega_role - Discover MegaBar models and create comprehensive permissions'
+  task 'megabar:create_mega_role' => :environment do
+    puts "🔍 Discovering MegaBar models and creating permissions..."
+    
+    # Check if MegaBar is available
+    unless defined?(MegaBar)
+      puts "❌ MegaBar engine not detected"
+      puts "💡 Make sure MegaBar is properly installed and configured"
+      exit 1
+    end
+    
+    # Use the new engine discovery approach
+    megabar_models = []
+    
+    begin
+      # Get all database tables that start with 'mega_bar_'
+      application_tables = ActiveRecord::Base.connection.tables.select do |table|
+        table.start_with?('mega_bar_')
+      end
+      
+      application_tables.each do |table|
+        # Convert table name to proper namespaced model name
+        model_part = table.gsub('mega_bar_', '').singularize.camelize
+        model_name = "MegaBar::#{model_part}"
+        
+        # Verify the model exists and is valid
+        begin
+          if Object.const_defined?(model_name)
+            model_class = Object.const_get(model_name)
+            if model_class.respond_to?(:table_name) && 
+               model_class.table_name == table
+              megabar_models << model_name
+            end
+          else
+            # Model constant doesn't exist yet, but table does - likely a valid model
+            megabar_models << model_name
+          end
+        rescue => e
+          # Skip if there's an error
+        end
+      end
+      
+    rescue => e
+      puts "❌ Error detecting MegaBar models: #{e.message}"
+      exit 1
+    end
+    
+    if megabar_models.empty?
+      puts "⚠️  No MegaBar models found"
+      puts "💡 Make sure MegaBar is properly set up and models exist"
+      exit 1
+    end
+    
+    puts "📋 Found #{megabar_models.count} MegaBar models:"
+    megabar_models.each { |model| puts "   - #{model}" }
+    
+    # Create "Mega Role" if it doesn't exist
+    mega_role = Cccux::Role.find_or_create_by(name: 'Mega Role') do |role|
+      role.description = 'Global permissions for all MegaBar models'
+      role.active = true
+    end
+    
+    if mega_role.persisted? && !mega_role.previously_persisted?
+      puts "✅ Created 'Mega Role'"
+      puts "💡 Visit /cccux/users/ to assign users to the 'Mega Role'"
+    else
+      puts "ℹ️  'Mega Role' already exists"
+    end
+    
+    # Create CRUD permissions for each MegaBar model
+    actions = %w[create read update destroy]
+    permissions_created = 0
+    
+    megabar_models.each do |model_name|
+      actions.each do |action|
+        permission = Cccux::AbilityPermission.find_or_create_by(
+          action: action,
+          subject: model_name
+        ) do |p|
+          p.description = "#{action.capitalize} #{model_name.pluralize.downcase}"
+          p.active = true
+        end
+        
+        if permission.persisted? && !permission.previously_persisted?
+          permissions_created += 1
+        end
+      end
+    end
+    
+    # Assign all permissions to the Mega Role
+    assigned_permissions = 0
+    Cccux::AbilityPermission.where(subject: megabar_models).each do |permission|
+      role_ability = Cccux::RoleAbility.find_or_create_by(
+        role: mega_role,
+        ability_permission: permission
+      )
+      
+      if role_ability.persisted? && !role_ability.previously_persisted?
+        assigned_permissions += 1
+      end
+    end
+    
+    puts "✅ Created #{permissions_created} permissions for MegaBar models"
+    puts "✅ Assigned #{assigned_permissions} permissions to 'Mega Role'"
+    puts ""
+    puts "🎉 MegaBar permissions setup completed!"
+    puts "💡 Users with 'Mega Role' will have full access to all MegaBar models"
   end
 
   private
@@ -600,10 +705,7 @@ namespace :cccux do
                 <span class="user-info">
                   👤 <strong><%= current_user.email %></strong>
                   <span class="footer-separator">|</span>
-                  <%= link_to "🚪 Logout", main_app.destroy_user_session_path, 
-                      method: :delete, 
-                      class: "footer-link",
-                      data: { turbo_method: :delete } %>
+                  <%= button_to "Logout", main_app.destroy_user_session_path, method: :delete, class: "footer-link auth-link", style: "background: none; border: none; color: #007bff; text-decoration: none; padding: 5px 10px; border-radius: 4px; transition: all 0.2s ease; font-weight: 500; cursor: pointer; font: inherit;" %>
                 </span>
               <% else %>
                 <span class="auth-links">
