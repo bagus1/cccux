@@ -2,12 +2,14 @@ module Cccux
   module AuthorizationHelper
     # Link helpers for common actions
     def link_if_can_index(subject, text, path, **opts)
-      can?(:index, subject) ? link_to(text, path, **opts) : ""
+      prepend = opts.delete(:prepend)
+      can?(:index, subject) ? "#{prepend}#{link_to(text, path, **opts)}".html_safe : ""
     end
 
     def link_if_can_show(subject, text, path, **opts)
+      prepend = opts.delete(:prepend)
       if can?(:show, subject)
-        link_to(text, path, **opts)
+        "#{prepend}#{link_to(text, path, **opts)}".html_safe
       elsif opts.delete(:show_text)
         text
       else
@@ -16,19 +18,23 @@ module Cccux
     end
 
     def link_if_can_create(subject, text, path, **opts)
-      can?(:create, subject) ? link_to(text, path, **opts) : ""
+      prepend = opts.delete(:prepend)
+      can?(:create, subject) ? "#{prepend}#{link_to(text, path, **opts)}".html_safe : ""
     end
 
     def link_if_can_edit(subject, text, path, **opts)
-      can?(:edit, subject) ? link_to(text, path, **opts) : ""
+      prepend = opts.delete(:prepend)
+      can?(:edit, subject) ? "#{prepend}#{link_to(text, path, **opts)}".html_safe : ""
     end
 
     def link_if_can_update(subject, text, path, **opts)
-      can?(:update, subject) ? link_to(text, path, **opts) : ""
+      prepend = opts.delete(:prepend)
+      can?(:update, subject) ? "#{prepend}#{link_to(text, path, **opts)}".html_safe : ""
     end
 
     def link_if_can_destroy(subject, text, path, **opts)
-      can?(:destroy, subject) ? link_to(text, path, **opts) : ""
+      prepend = opts.delete(:prepend)
+      can?(:destroy, subject) ? "#{prepend}#{link_to(text, path, **opts)}".html_safe : ""
     end
 
     # Button helpers for common actions
