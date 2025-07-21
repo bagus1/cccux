@@ -1,15 +1,11 @@
 module Cccux
   module AuthorizationHelper
     # Link helpers for common actions
-    def link_if_can_index(subject, text, path, **opts)
+    def link_if_can_with_wrapper(action, subject, text, path, **opts)
       prepend = opts.delete(:prepend)
-      can?(:index, subject) ? "#{prepend}#{link_to(text, path, **opts)}".html_safe : ""
-    end
-
-    def link_if_can_show(subject, text, path, **opts)
-      prepend = opts.delete(:prepend)
-      if can?(:show, subject)
-        "#{prepend}#{link_to(text, path, **opts)}".html_safe
+      append = opts.delete(:append)
+      if can?(action, subject)
+        "#{prepend}#{link_to(text, path, **opts)}#{append}".html_safe
       elsif opts.delete(:show_text)
         text
       else
@@ -17,24 +13,28 @@ module Cccux
       end
     end
 
+    def link_if_can_index(subject, text, path, **opts)
+      link_if_can_with_wrapper(:index, subject, text, path, **opts)
+    end
+
+    def link_if_can_show(subject, text, path, **opts)
+      link_if_can_with_wrapper(:show, subject, text, path, **opts)
+    end
+
     def link_if_can_create(subject, text, path, **opts)
-      prepend = opts.delete(:prepend)
-      can?(:create, subject) ? "#{prepend}#{link_to(text, path, **opts)}".html_safe : ""
+      link_if_can_with_wrapper(:create, subject, text, path, **opts)
     end
 
     def link_if_can_edit(subject, text, path, **opts)
-      prepend = opts.delete(:prepend)
-      can?(:edit, subject) ? "#{prepend}#{link_to(text, path, **opts)}".html_safe : ""
+      link_if_can_with_wrapper(:edit, subject, text, path, **opts)
     end
 
     def link_if_can_update(subject, text, path, **opts)
-      prepend = opts.delete(:prepend)
-      can?(:update, subject) ? "#{prepend}#{link_to(text, path, **opts)}".html_safe : ""
+      link_if_can_with_wrapper(:update, subject, text, path, **opts)
     end
 
     def link_if_can_destroy(subject, text, path, **opts)
-      prepend = opts.delete(:prepend)
-      can?(:destroy, subject) ? "#{prepend}#{link_to(text, path, **opts)}".html_safe : ""
+      link_if_can_with_wrapper(:destroy, subject, text, path, **opts)
     end
 
     # Button helpers for common actions
