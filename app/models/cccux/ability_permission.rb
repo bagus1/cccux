@@ -12,6 +12,9 @@ module Cccux
     scope :for_subject, ->(subject) { where(subject: subject) }
     scope :for_action, ->(action) { where(action: action) }
     
+    # Ensure all permissions are created as active by default
+    before_create :ensure_active
+    
     def display_name
       "#{action.humanize} #{subject}"
     end
@@ -56,6 +59,12 @@ module Cccux
       klass.respond_to?(:scoped_for_user) ||
       klass.column_names.include?('user_id') ||
       klass.column_names.include?('creator_id')
+    end
+    
+    private
+    
+    def ensure_active
+      self.active = true if active.nil?
     end
   end
 end
