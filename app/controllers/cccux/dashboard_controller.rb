@@ -53,6 +53,12 @@ module Cccux
                    alert: "No new permissions were added. Models may already have permissions."
       end
     end
+
+    def clear_model_cache
+      clear_model_discovery_cache
+      redirect_to cccux.model_discovery_path, 
+                 notice: "Model discovery cache cleared! New models should now be visible."
+    end
     
     # Handle any unmatched routes in CCCUX - redirect to home
     def not_found
@@ -62,17 +68,69 @@ module Cccux
     private
 
     def detect_application_models
+      # Use cached results if available
+      return @detected_models_cache if @detected_models_cache
+      
+      # Force Rails to reload constants for better model discovery
+      begin
+        Rails.application.eager_load! if Rails.application.config.eager_load
+      rescue => e
+        Rails.logger.warn "Could not eager load: #{e.message}"
+      end
+      
+      # Also try to load models from app/models directory
+      begin
+        app_models_path = Rails.root.join('app', 'models')
+        if Dir.exist?(app_models_path)
+          Dir.glob(File.join(app_models_path, '**', '*.rb')).each do |model_file|
+            begin
+              load model_file unless $LOADED_FEATURES.include?(model_file)
+            rescue => e
+              Rails.logger.debug "Could not load model file #{model_file}: #{e.message}"
+            end
+          end
+        end
+      rescue => e
+        Rails.logger.warn "Could not load models from app/models: #{e.message}"
+      end
+      
       models = []
       
       begin
-        # Direct approach: Get models from database tables (bypasses all autoloading issues)
+        # Primary approach: Use Rails' built-in model discovery
+        Rails.logger.info "🔍 Using Rails model discovery approach..."
+        
+        # Get all ApplicationRecord descendants (this includes all models)
+        if defined?(ApplicationRecord)
+          ApplicationRecord.descendants.each do |model_class|
+            next if model_class.abstract_class?
+            next if model_class.name.nil?
+            next if skip_model_by_name?(model_class.name)
+            
+            models << model_class.name
+            Rails.logger.debug "Found model via ApplicationRecord: #{model_class.name}"
+          end
+        end
+        
+        # Fallback: Get all ActiveRecord::Base descendants
+        ActiveRecord::Base.descendants.each do |model_class|
+          next if model_class.abstract_class?
+          next if model_class.name.nil?
+          next if skip_model_by_name?(model_class.name)
+          next if models.include?(model_class.name) # Avoid duplicates
+          
+          models << model_class.name
+          Rails.logger.debug "Found model via ActiveRecord::Base: #{model_class.name}"
+        end
+        
+        # Secondary approach: Database table discovery for any missing models
+        Rails.logger.info "🔍 Using database table discovery as backup..."
         
         application_tables = ActiveRecord::Base.connection.tables.reject do |table|
           # Skip Rails internal tables and CCCUX tables
           table.start_with?('schema_migrations', 'ar_internal_metadata', 'cccux_') ||
           skip_table?(table)
         end
-        
         
         # Discover modules and their table patterns
         module_table_patterns = discover_module_table_patterns
@@ -91,27 +149,29 @@ module Cccux
             model_name = "#{module_name}::#{model_part}"
           end
           
-          # Verify the model exists and is valid
-          begin
-            if Object.const_defined?(model_name)
-              model_class = Object.const_get(model_name)
-              if model_class.respond_to?(:table_name) && 
-                 model_class.table_name == table &&
-                 !skip_model_by_name?(model_name)
+          # Only add if not already found and not skipped
+          unless models.include?(model_name) || skip_model_by_name?(model_name)
+            # Try to verify the model exists
+            begin
+              if Object.const_defined?(model_name)
+                model_class = Object.const_get(model_name)
+                if model_class.respond_to?(:table_name) && model_class.table_name == table
+                  models << model_name
+                  Rails.logger.debug "Found model via table discovery: #{model_name}"
+                end
+              else
+                # Model constant doesn't exist but table does - likely a valid model
                 models << model_name
+                Rails.logger.debug "Found potential model via table: #{model_name}"
               end
-            else
-              # Model constant doesn't exist yet, but table does - likely a valid model
-              unless skip_model_by_name?(model_name)
-                models << model_name
-              end
+            rescue => e
+              Rails.logger.debug "Error verifying model #{model_name}: #{e.message}"
             end
-          rescue => e
           end
         end
         
       rescue => e
-        Rails.logger.error "Error detecting models from database: #{e.message}"
+        Rails.logger.error "Error detecting models: #{e.message}"
         Rails.logger.error e.backtrace.join("\n")
       end
       
@@ -125,10 +185,15 @@ module Cccux
       Rails.logger.info "  Application models: #{models.reject { |m| m.start_with?('Cccux::') }.join(', ')}"
       Rails.logger.info "  CCCUX models: #{models.select { |m| m.start_with?('Cccux::') }.join(', ')}"
       
-      models.uniq.sort
+      # Cache the results
+      @detected_models_cache = models.uniq.sort
+      @detected_models_cache
     end
 
     def discover_module_table_patterns
+      # Use cached results if available
+      return @module_table_patterns_cache if @module_table_patterns_cache
+      
       patterns = {}
       
       # Skip Rails internal engines and third-party gems
@@ -154,7 +219,10 @@ module Cccux
       end
       
       Rails.logger.info "Module table patterns: #{patterns}"
-      patterns
+      
+      # Cache the results
+      @module_table_patterns_cache = patterns
+      @module_table_patterns_cache
     end
     
     def find_table_prefix_for_module(module_name)
@@ -264,6 +332,12 @@ module Cccux
       
       excluded_tables.include?(table_name) ||
       table_name.end_with?('_versions') # PaperTrail version tables
+    end
+
+    def clear_model_discovery_cache
+      @detected_models_cache = nil
+      @module_table_patterns_cache = nil
+      Rails.logger.info "🔄 Model discovery cache cleared"
     end
   end
 end
