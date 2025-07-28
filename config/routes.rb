@@ -11,6 +11,7 @@ Cccux::Engine.routes.draw do
   # Model Discovery Routes
   get 'model-discovery', to: 'dashboard#model_discovery', as: :model_discovery
   post 'sync-permissions', to: 'dashboard#sync_permissions', as: :sync_permissions
+  post 'clear-model-cache', to: 'dashboard#clear_model_cache', as: :clear_model_cache
   
   # Admin CRUD routes for user management
   resources :users do

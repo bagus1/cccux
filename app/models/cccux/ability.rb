@@ -172,6 +172,7 @@ module Cccux
       else
         candidates << subject
         candidates << "Cccux::#{subject}"
+      
       end
       
       # Add more candidates for common patterns

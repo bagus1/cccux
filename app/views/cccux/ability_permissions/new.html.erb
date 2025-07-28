@@ -292,11 +292,11 @@ document.addEventListener('DOMContentLoaded', function() {
   function getActionType(action) {
     const crudActions = ['read', 'create', 'update', 'destroy'];
     if (crudActions.includes(action)) {
-      return 'CRUD';
+      return ' (CRUD)';
     } else if (action === 'manage') {
       return 'ALL';
     } else {
-      return 'CUSTOM';
+      return ' (Custom)';
     }
   }
   

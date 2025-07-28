@@ -1,8 +1,13 @@
 <div style="margin-bottom: 2rem;">
   <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
     <h1 style="margin: 0; color: #495057;">Model Discovery & Permission Sync</h1>
-    <%= link_to "← Back to Dashboard", cccux.root_path, 
-        style: "background-color: #6c757d; color: white; padding: 0.5rem 1rem; text-decoration: none; border-radius: 4px;" %>
+    <div style="display: flex; gap: 0.5rem;">
+      <%= link_to "🔄 Refresh", cccux.clear_model_cache_path, 
+          method: :post,
+          style: "background-color: #17a2b8; color: white; padding: 0.5rem 1rem; text-decoration: none; border-radius: 4px;" %>
+      <%= link_to "← Back to Dashboard", cccux.root_path, 
+          style: "background-color: #6c757d; color: white; padding: 0.5rem 1rem; text-decoration: none; border-radius: 4px;" %>
+    </div>
   </div>
   
   <div style="background-color: #e7f3ff; border: 1px solid #b8daff; padding: 1rem; border-radius: 4px; margin-bottom: 2rem;">

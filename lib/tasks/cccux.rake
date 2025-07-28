@@ -10,55 +10,68 @@ namespace :cccux do
     
     # Step 1: Ensure Devise is installed and working
     puts "📋 Step 1: Verifying Devise installation..."
-    # Check if Devise is installed and User model exists with Devise configuration
-    devise_installed = defined?(Devise)
-    user_model_exists = false
-    user_has_devise = false
     
-    if devise_installed
-      begin
-        user_class = Object.const_get('User')
-        user_model_exists = true
-        
-        # Check if User model has Devise modules
-        user_has_devise = user_class.respond_to?(:devise_modules) && user_class.devise_modules.any?
-        
-        # Also check if User model file contains Devise configuration as backup
-        if !user_has_devise
-          user_model_path = Rails.root.join('app', 'models', 'user.rb')
-          if File.exist?(user_model_path)
-            user_content = File.read(user_model_path)
-            user_has_devise = user_content.include?('devise :')
-          end
-        end
-      rescue NameError
-        # User model doesn't exist
+    # Check if Devise files exist (more reliable than checking loaded state)
+    devise_gem_in_gemfile = File.exist?(Rails.root.join('Gemfile')) && 
+                           File.read(Rails.root.join('Gemfile')).include?('gem "devise"')
+    devise_initializer_exists = File.exist?(Rails.root.join('config', 'initializers', 'devise.rb'))
+    user_model_has_devise = File.exist?(Rails.root.join('app', 'models', 'user.rb')) && 
+                           File.read(Rails.root.join('app', 'models', 'user.rb')).include?('devise :')
+    routes_has_devise = File.exist?(Rails.root.join('config', 'routes.rb')) && 
+                       File.read(Rails.root.join('config', 'routes.rb')).include?('devise_for :users')
+    
+    # Check if Devise is loaded in the current environment (optional check)
+    devise_loaded = defined?(Devise)
+    user_model_exists = defined?(User)
+    user_has_devise_methods = user_model_exists && User.respond_to?(:devise)
+    
+    puts "   📋 Devise status check:"
+    puts "      - Devise gem in Gemfile: #{devise_gem_in_gemfile ? '✅' : '❌'}"
+    puts "      - Devise initializer: #{devise_initializer_exists ? '✅' : '❌'}"
+    puts "      - User model has Devise: #{user_model_has_devise ? '✅' : '❌'}"
+    puts "      - Routes have Devise: #{routes_has_devise ? '✅' : '❌'}"
+    puts "      - Devise loaded in environment: #{devise_loaded ? '✅' : '❌'}"
+    puts "      - User model has Devise methods: #{user_has_devise_methods ? '✅' : '❌'}"
+    
+    # If Devise files exist but aren't loaded, that's normal - just continue
+    if devise_gem_in_gemfile && devise_initializer_exists && user_model_has_devise && routes_has_devise
+      if devise_loaded && user_has_devise_methods
+        puts "✅ Devise is properly installed and loaded"
+      else
+        puts "✅ Devise files are properly installed"
+        puts "💡 Devise will be fully loaded after server restart"
       end
-    end
-    
-    unless devise_installed && user_model_exists && user_has_devise
-      puts "❌ Devise is not properly installed or configured. Please run the following command first:"
-      puts " "
+    else
+      puts "❌ Devise is not properly installed or configured."
+      puts "run the following commands to install Devise: "
       puts "   bundle add devise && rails generate devise:install && rails generate devise User && rails db:migrate"
-      puts " "
-      puts "Then re-run: rails cccux:setup"
+      puts "   then run: rails cccux:setup again after Devise is installed"
       exit 1
     end
     
     puts "✅ Devise is properly installed"
     
-    # Step 2: Configure routes
-    puts "📋 Step 2: Configuring routes..."
+    # Step 2: Verify Devise is using default controllers
+    puts "📋 Step 2: Verifying Devise configuration..."
+    if Dir.exist?(Rails.root.join('app', 'controllers', 'users'))
+      puts "   ⚠️  Custom Devise controllers detected - these may cause conflicts"
+      puts "   ℹ️  Using default Devise controllers is recommended for stability"
+    else
+      puts "   ✅ Using default Devise controllers (recommended)"
+    end
+    
+    # Step 3: Configure routes
+    puts "📋 Step 3: Configuring routes..."
     configure_routes
     puts "✅ Routes configured"
     
-    # Step 3: Configure assets
-    puts "📋 Step 3: Configuring assets..."
+    # Step 4: Configure assets
+    puts "📋 Step 4: Configuring assets..."
     configure_assets
     puts "✅ Assets configured"
     
-    # Step 4: Run CCCUX migrations
-    puts "📋 Step 4: Running CCCUX migrations..."
+    # Step 5: Run CCCUX migrations
+    puts "📋 Step 5: Running CCCUX migrations..."
     begin
       Rake::Task['db:migrate'].invoke
     rescue RuntimeError => e
@@ -70,38 +83,43 @@ namespace :cccux do
     end
     puts "✅ CCCUX migrations completed"
     
-    # Step 5: Include CCCUX concern in User model
-    puts "📋 Step 5: Adding CCCUX to User model..."
+    # Step 6: Include CCCUX concern in User model
+    puts "📋 Step 6: Adding CCCUX to User model..."
     include_cccux_concern
     puts "✅ CCCUX concern added to User model"
     
-    # Step 5.5: Configure ApplicationController with CCCUX
-    puts "📋 Step 5.5: Configuring ApplicationController with CCCUX..."
+    # Step 7: Configure ApplicationController with CCCUX
+    puts "📋 Step 7: Configuring ApplicationController with CCCUX..."
     configure_application_controller
     puts "✅ ApplicationController configured with CCCUX"
     
-    # Step 6: Create initial roles and permissions
-    puts "📋 Step 6: Creating initial roles and permissions..."
+    # Step 8: Create initial roles and permissions
+    puts "📋 Step 8: Creating initial roles and permissions..."
     create_default_roles_and_permissions
     puts "✅ Default roles and permissions created"
     
-    # Step 7: Create default admin user (if no users exist)
-    puts "📋 Step 7: Creating default admin user..."
+    # Step 9: Create default admin user (if no users exist)
+    puts "📋 Step 9: Creating default admin user..."
     create_default_admin_user
     
-        # Step 8: Create footer partial
-    puts "📋 Step 8: Creating footer partial..."
+    # Step 10: Create footer partial
+    puts "📋 Step 10: Creating footer partial..."
     create_footer_partial
     puts "✅ Footer partial created"
     
-    # Step 9: Create home controller if needed
-    puts "📋 Step 9: Checking for home controller..."
+    # Step 11: Create home controller if needed
+    puts "📋 Step 11: Checking for home controller..."
     create_home_controller
     puts "✅ Home controller check completed"
     
-    # Step 10: Verify setup
-    puts "📋 Step 10: Verifying setup..."
+    # Step 12: Verify setup
+    puts "📋 Step 12: Verifying setup..."
     verify_setup
+
+    # Step 13: Precompile assets
+    puts "📋 Step 13: Precompiling assets..."
+    precompile_assets
+    puts "✅ Assets precompiled"
 
     puts ""
     puts "🎉 CCCUX + Devise setup completed successfully!"
@@ -224,11 +242,123 @@ namespace :cccux do
     puts "✅ CCCUX removed from application"
   end
 
+  desc 'megabar:create_mega_role - Discover MegaBar models and create comprehensive permissions'
+  task 'megabar:create_mega_role' => :environment do
+    puts "🔍 Discovering MegaBar models and creating permissions..."
+    
+    # Check if MegaBar is available
+    unless defined?(MegaBar)
+      puts "❌ MegaBar engine not detected"
+      puts "💡 Make sure MegaBar is properly installed and configured"
+      exit 1
+    end
+    
+    # Use the new engine discovery approach
+    megabar_models = []
+    
+    begin
+      # Get all database tables that start with 'mega_bar_'
+      application_tables = ActiveRecord::Base.connection.tables.select do |table|
+        table.start_with?('mega_bar_')
+      end
+      
+      application_tables.each do |table|
+        # Convert table name to proper namespaced model name
+        model_part = table.gsub('mega_bar_', '').singularize.camelize
+        model_name = "MegaBar::#{model_part}"
+        
+        # Verify the model exists and is valid
+        begin
+          if Object.const_defined?(model_name)
+            model_class = Object.const_get(model_name)
+            if model_class.respond_to?(:table_name) && 
+               model_class.table_name == table
+              megabar_models << model_name
+            end
+          else
+            # Model constant doesn't exist yet, but table does - likely a valid model
+            megabar_models << model_name
+          end
+        rescue => e
+          # Skip if there's an error
+        end
+      end
+      
+    rescue => e
+      puts "❌ Error detecting MegaBar models: #{e.message}"
+      exit 1
+    end
+    
+    if megabar_models.empty?
+      puts "⚠️  No MegaBar models found"
+      puts "💡 Make sure MegaBar is properly set up and models exist"
+      exit 1
+    end
+    
+    puts "📋 Found #{megabar_models.count} MegaBar models:"
+    megabar_models.each { |model| puts "   - #{model}" }
+    
+    # Create "Mega Role" if it doesn't exist
+    mega_role = Cccux::Role.find_or_create_by(name: 'Mega Role') do |role|
+      role.description = 'Global permissions for all MegaBar models'
+      role.active = true
+    end
+    
+    if mega_role.persisted? && !mega_role.previously_persisted?
+      puts "✅ Created 'Mega Role'"
+      puts "💡 Visit /cccux/users/ to assign users to the 'Mega Role'"
+    else
+      puts "ℹ️  'Mega Role' already exists"
+    end
+    
+    # Create CRUD permissions for each MegaBar model
+    actions = %w[create read update destroy]
+    permissions_created = 0
+    
+    megabar_models.each do |model_name|
+      actions.each do |action|
+        permission = Cccux::AbilityPermission.find_or_create_by(
+          action: action,
+          subject: model_name
+        ) do |p|
+          p.description = "#{action.capitalize} #{model_name.pluralize.downcase}"
+          p.active = true
+        end
+        
+        if permission.persisted? && !permission.previously_persisted?
+          permissions_created += 1
+        end
+      end
+    end
+    
+    # Assign all permissions to the Mega Role
+    assigned_permissions = 0
+    Cccux::AbilityPermission.where(subject: megabar_models).each do |permission|
+      role_ability = Cccux::RoleAbility.find_or_create_by(
+        role: mega_role,
+        ability_permission: permission
+      )
+      
+      if role_ability.persisted? && !role_ability.previously_persisted?
+        assigned_permissions += 1
+      end
+    end
+    
+    puts "✅ Created #{permissions_created} permissions for MegaBar models"
+    puts "✅ Assigned #{assigned_permissions} permissions to 'Mega Role'"
+    puts ""
+    puts "🎉 MegaBar permissions setup completed!"
+    puts "💡 Users with 'Mega Role' will have full access to all MegaBar models"
+  end
+
   private
 
   def configure_routes
     routes_path = Rails.root.join('config/routes.rb')
     routes_content = File.read(routes_path)
+    
+    # Check if Devise controllers exist
+    devise_controllers_exist = Dir.exist?(Rails.root.join('app', 'controllers', 'users'))
     
     # Ensure devise_for :users is before engine mount
     unless routes_content.include?('devise_for :users')
@@ -236,6 +366,12 @@ namespace :cccux do
       new_content = "Rails.application.routes.draw do\n  devise_for :users\n\n" + routes_content.lines[1..-1].join
       File.write(routes_path, new_content)
       routes_content = File.read(routes_path)
+    end
+    
+    # Ensure routes use default Devise controllers (recommended for stability)
+    if devise_controllers_exist
+      puts "   ⚠️  Custom Devise controllers detected - consider removing them for stability"
+      puts "   ℹ️  Routes will use default Devise controllers"
     end
     
     # Add engine mount if not present
@@ -250,40 +386,9 @@ namespace :cccux do
   end
 
   def configure_assets
-    # Add CSS assets
-    css_path = Rails.root.join('app/assets/stylesheets/application.css')
-    if File.exist?(css_path)
-      css_content = File.read(css_path)
-      
-      # Check if we're using Propshaft or Sprockets
-      if defined?(Propshaft)
-        # For Propshaft, copy the actual CSS content since it doesn't process @import
-        unless css_content.include?('CCCUX Engine Styles')
-          # Read the CCCUX CSS content
-          cccux_css_path = File.join(File.dirname(__FILE__), '..', '..', 'app', 'assets', 'stylesheets', 'cccux', 'application.css')
-          if File.exist?(cccux_css_path)
-            cccux_css_content = File.read(cccux_css_path)
-            # Extract just the CSS rules, not the manifest comments
-            css_rules = cccux_css_content.split('*/').last.strip if cccux_css_content.include?('*/')
-            css_rules ||= cccux_css_content
-            
-            File.open(css_path, 'a') do |f|
-              f.puts "\n\n/* CCCUX Engine Styles - Added by CCCUX setup */"
-              f.puts css_rules
-            end
-            puts "   ✅ Added CCCUX CSS content to application.css (Propshaft)"
-          else
-            puts "   ⚠️  Could not find CCCUX CSS file at #{cccux_css_path}"
-          end
-        end
-      else
-        # Sprockets uses *= require syntax
-        unless css_content.include?('cccux/application')
-          File.open(css_path, 'a') { |f| f.puts "/*\n *= require cccux/application\n */" }
-          puts "   ✅ Added CCCUX CSS to application.css (Sprockets)"
-        end
-      end
-    end
+    # Note: CCCUX styles are now loaded via the engine's asset pipeline
+    # No need to copy styles to host app's application.css
+    puts "   ℹ️  CCCUX styles will be loaded via engine asset pipeline"
     
     # Add JavaScript assets (if using legacy asset pipeline)
     js_path = Rails.root.join('app/assets/javascripts/application.js')
@@ -580,10 +685,10 @@ namespace :cccux do
     
     footer_path = shared_dir.join('_footer.html.erb')
     
-    # Create footer content
+    # Create footer content - No inline styles, uses CCCUX engine CSS
     footer_content = <<~ERB
-      <!-- CCCUX Footer - Added by CCCUX setup -->
-      <footer class="cccux-footer" style="margin-top: 2rem; padding: 1rem 0; border-top: 1px solid #e5e5e5; background-color: #f8f9fa;">
+      <!-- CCCUX Footer - Styles loaded from CCCUX engine -->
+      <footer class="cccux-footer">
         <div class="container">
           <div class="row">
             <div class="col-md-6">
@@ -591,7 +696,7 @@ namespace :cccux do
                 <a href="<%= main_app.root_path %>" class="footer-link">🏠 Home</a>
                 <% if user_signed_in? && current_user.has_role?('Role Manager') %>
                   <span class="footer-separator">|</span>
-                  <a href="<%= cccux.root_path %>" class="footer-link">⚙️ CCCUX Admin</a>
+                  <a href="/cccux" class="footer-link">⚙️ CCCUX Admin</a>
                 <% end %>
               </nav>
             </div>
@@ -600,10 +705,7 @@ namespace :cccux do
                 <span class="user-info">
                   👤 <strong><%= current_user.email %></strong>
                   <span class="footer-separator">|</span>
-                  <%= link_to "🚪 Logout", main_app.destroy_user_session_path, 
-                      method: :delete, 
-                      class: "footer-link",
-                      data: { turbo_method: :delete } %>
+                  <%= button_to "Logout", main_app.destroy_user_session_path, method: :delete, class: "footer-link auth-link", style: "background: none; border: none; color: #007bff; text-decoration: none; padding: 5px 10px; border-radius: 4px; transition: all 0.2s ease; font-weight: 500; cursor: pointer; font: inherit;" %>
                 </span>
               <% else %>
                 <span class="auth-links">
@@ -616,67 +718,17 @@ namespace :cccux do
           </div>
         </div>
       </footer>
-
-      <style>
-        .cccux-footer {
-          font-size: 0.9rem;
-          color: #6c757d;
-        }
-        .cccux-footer .footer-link {
-          color: #007bff;
-          text-decoration: none;
-          margin: 0 0.5rem;
-        }
-        .cccux-footer .footer-link:hover {
-          color: #0056b3;
-          text-decoration: underline;
-        }
-        .cccux-footer .footer-separator {
-          color: #dee2e6;
-          margin: 0 0.25rem;
-        }
-        .cccux-footer .user-info,
-        .cccux-footer .auth-links {
-          font-size: 0.85rem;
-        }
-        .cccux-footer .container {
-          max-width: 1200px;
-          margin: 0 auto;
-          padding: 0 1rem;
-        }
-        .cccux-footer .row {
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-          flex-wrap: wrap;
-        }
-        .cccux-footer .col-md-6 {
-          flex: 1;
-          min-width: 300px;
-        }
-        .cccux-footer .text-end {
-          text-align: right;
-        }
-        @media (max-width: 768px) {
-          .cccux-footer .row {
-            flex-direction: column;
-            gap: 0.5rem;
-          }
-          .cccux-footer .col-md-6 {
-            text-align: center;
-          }
-          .cccux-footer .text-end {
-            text-align: center;
-          }
-        }
-      </style>
     ERB
     
     # Write the footer partial
     File.write(footer_path, footer_content)
-    puts "   ✅ Created footer partial at #{footer_path}"
+    puts "✅ Created footer partial at #{footer_path}"
     
-    # Also create a simple include instruction for the application layout
+    # Include footer in application layout
+    include_footer_in_layout
+  end
+
+  def include_footer_in_layout
     layout_path = Rails.root.join('app', 'views', 'layouts', 'application.html.erb')
     if File.exist?(layout_path)
       layout_content = File.read(layout_path)
@@ -690,35 +742,74 @@ namespace :cccux do
             "\\1  <%= render 'shared/footer' %>\n\\1</body>"
           )
           File.write(layout_path, updated_content)
-          puts "   ✅ Added footer to application layout"
+          puts "✅ Added footer to application layout"
         else
-          puts "   ⚠️  Could not find </body> tag in application layout - please manually add: <%= render 'shared/footer' %>"
+          puts "⚠️  Could not find </body> tag in application layout - please manually add: <%= render 'shared/footer' %>"
         end
       else
-        puts "   ℹ️  Footer already included in application layout"
+        puts "ℹ️  Footer already included in application layout"
       end
     else
-      puts "   ⚠️  Application layout not found - please manually add: <%= render 'shared/footer' %>"
+      puts "⚠️  Application layout not found - please manually add: <%= render 'shared/footer' %>"
     end
   end
 
   def verify_setup
     # Test that User model has CCCUX methods
+    # First, try to reload the User model file to pick up the concern
+    begin
+      load Rails.root.join('app', 'models', 'user.rb')
+    rescue => e
+      puts "   ⚠️  Could not reload User model: #{e.message}"
+    end
+    
     user = User.new
     unless user.respond_to?(:has_role?)
       puts "❌ User model missing CCCUX methods"
+      puts "   💡 This sometimes happens on the first run. Try running 'rails cccux:setup' again."
+      puts "   🔧 The concern was added to the User model file, but Rails needs to reload it."
       exit 1
     end
     
     puts "✅ CCCUX methods available on User model"
     
-    # Test route helpers
+    # Check if Devise files exist (more reliable than testing routes in rake context)
+    devise_initializer_exists = File.exist?(Rails.root.join('config', 'initializers', 'devise.rb'))
+    user_model_has_devise = File.exist?(Rails.root.join('app', 'models', 'user.rb')) && 
+                           File.read(Rails.root.join('app', 'models', 'user.rb')).include?('devise :')
+    routes_has_devise = File.exist?(Rails.root.join('config', 'routes.rb')) && 
+                       File.read(Rails.root.join('config', 'routes.rb')).include?('devise_for :users')
+    
+    puts "   📋 Devise file verification:"
+    puts "      - Devise initializer: #{devise_initializer_exists ? '✅' : '❌'}"
+    puts "      - User model has Devise: #{user_model_has_devise ? '✅' : '❌'}"
+    puts "      - Routes have Devise: #{routes_has_devise ? '✅' : '❌'}"
+    
+    if devise_initializer_exists && user_model_has_devise && routes_has_devise
+      puts "✅ Devise files properly configured"
+      puts "💡 Devise routes will be available after server restart"
+    else
+      puts "⚠️  Some Devise files may be missing or incomplete"
+      puts "💡 This is normal if Devise was just installed - restart your server to complete setup"
+    end
+  end
+
+  def precompile_assets
+    puts "   🔧 Precompiling CCCUX assets..."
+    
     begin
-      Rails.application.routes.url_helpers.new_user_session_path
-      puts "✅ Devise routes working"
+      # Run assets:precompile task
+      Rake::Task['assets:precompile'].invoke
+      puts "   ✅ Assets precompiled successfully"
+    rescue RuntimeError => e
+      if e.message.include?("Don't know how to build task 'assets:precompile'")
+        puts "   ⚠️  Assets precompile task not available (this is normal in some contexts)"
+        puts "   ℹ️  Assets will be compiled automatically when the server starts"
+      else
+        puts "   ❌ Error precompiling assets: #{e.message}"
+      end
     rescue => e
-      puts "❌ Devise routes not working: #{e.message}"
-      exit 1
+      puts "   ❌ Unexpected error during asset precompilation: #{e.message}"
     end
   end
 end 

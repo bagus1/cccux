@@ -51,9 +51,9 @@ module Cccux
           if Rails.env.test?
             format.html { render plain: "Access denied", status: :forbidden }
           else
-            format.html { redirect_to main_app.root_path, alert: 'You must be logged in to access the admin interface.' }
+            format.html { redirect_to main_app.root_path, alert: 'You must be logged in.' }
           end
-          format.json { render json: { success: false, error: 'You must be logged in to access the admin interface.' }, status: :unauthorized }
+          format.json { render json: { success: false, error: 'You must be logged in.' }, status: :unauthorized }
         end
         return
       end

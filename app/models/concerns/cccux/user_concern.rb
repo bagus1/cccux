@@ -9,6 +9,9 @@ module Cccux
       has_many :cccux_user_roles, class_name: 'Cccux::UserRole', dependent: :destroy
       has_many :cccux_roles, through: :cccux_user_roles, source: :role, class_name: 'Cccux::Role'
       
+      # Alias for easier access
+      alias_method :roles, :cccux_roles
+      
       # Automatically assign Basic User role to new users
       after_create :assign_default_role
     end

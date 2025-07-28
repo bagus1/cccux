@@ -149,13 +149,26 @@ module Cccux
       
       # Add route-discovered actions
       route_actions = discover_actions_for_model(subject)
+      Rails.logger.debug "Route actions for #{subject}: #{route_actions}"
       actions += route_actions
+      # Add module-specific custom actions
+      if subject.include?('::')
+        module_name = subject.split('::').first
+        model_name = subject.split('::').last
+        
+        # Discover custom actions for this module's controllers
+        custom_actions = discover_custom_actions_for_module(module_name, model_name)
+        actions += custom_actions
+        Rails.logger.debug "Added #{module_name} custom actions: #{custom_actions}"
+      end
       
       # Add existing actions for this subject
       existing_actions = Cccux::AbilityPermission.where(subject: subject).distinct.pluck(:action).compact
       actions += existing_actions
       
-      actions.uniq.sort
+      final_actions = actions.uniq.sort
+      Rails.logger.debug "Final actions for #{subject}: #{final_actions}"
+      final_actions
     end
 
     def discover_application_models
@@ -188,11 +201,73 @@ module Cccux
       actions = []
       
       begin
-        # Convert subject to potential route patterns
-        resource_name = subject.underscore.pluralize
+        Rails.logger.debug "Discovering actions for subject: #{subject}"
         
-        # For CCCUX models, also check the engine routes
-        if subject.start_with?('Cccux::')
+        # Handle namespaced models (e.g., MegaBar::Page)
+        if subject.include?('::')
+          module_name = subject.split('::').first
+          model_name = subject.split('::').last.underscore.pluralize
+          controller_pattern = "#{module_name.underscore}/#{model_name}"
+          
+          Rails.logger.debug "Namespaced model detected. Looking for controller: #{controller_pattern}"
+          
+          # Try to find the engine for this module
+          engine_class = "#{module_name}::Engine".constantize rescue nil
+          
+          if engine_class
+            Rails.logger.debug "Found engine: #{engine_class}"
+            
+            # Look through engine routes for this namespaced controller
+            engine_class.routes.routes.each do |route|
+              controller_name = route.defaults[:controller]
+              next unless controller_name&.start_with?("#{module_name.underscore}/")
+              next unless route.defaults[:action]
+              
+              action = route.defaults[:action]
+              Rails.logger.debug "Found #{module_name} engine route: #{controller_name}##{action}"
+              
+              # Map HTTP verbs to standard actions and include custom actions
+              case action
+              when 'index' then actions << 'read'
+              when 'show' then actions << 'read'
+              when 'create' then actions << 'create'
+              when 'update' then actions << 'update'
+              when 'destroy' then actions << 'destroy'
+              when 'edit', 'new' then next # Skip these as they're UI actions
+              else
+                # Custom actions like 'move', 'administer_page', etc.
+                actions << action
+              end
+            end
+          else
+            Rails.logger.debug "No engine found for #{module_name}, checking main routes"
+            
+            # Fallback to main Rails routes
+            Rails.application.routes.routes.each do |route|
+              controller_name = route.defaults[:controller]
+              next unless controller_name&.start_with?("#{module_name.underscore}/")
+              next unless route.defaults[:action]
+              
+              action = route.defaults[:action]
+              Rails.logger.debug "Found #{module_name} route: #{controller_name}##{action}"
+              
+              # Map HTTP verbs to standard actions and include custom actions
+              case action
+              when 'index' then actions << 'read'
+              when 'show' then actions << 'read'
+              when 'create' then actions << 'create'
+              when 'update' then actions << 'update'
+              when 'destroy' then actions << 'destroy'
+              when 'edit', 'new' then next # Skip these as they're UI actions
+              else
+                # Custom actions like 'move', 'administer_page', etc.
+                actions << action
+              end
+            end
+          end
+          
+        # Handle CCCUX models
+        elsif subject.start_with?('Cccux::')
           cccux_resource_name = subject.gsub('Cccux::', '').underscore.pluralize
           
           # Look through CCCUX engine routes for this resource
@@ -216,26 +291,31 @@ module Cccux
               end
             end
           end
-        end
-        
-        # Also look through main Rails routes for this resource
-        Rails.application.routes.routes.each do |route|
-          next unless route.path.spec.to_s.include?(resource_name)
           
-          # Extract action from route
-          if route.defaults[:action]
-            action = route.defaults[:action]
-            # Map HTTP verbs to standard actions and include custom actions
-            case action
-            when 'index' then actions << 'read'
-            when 'show' then actions << 'read'
-            when 'create' then actions << 'create'
-            when 'update' then actions << 'update'
-            when 'destroy' then actions << 'destroy'
-            when 'edit', 'new' then next # Skip these as they're UI actions
-            else
-              # Custom actions
-              actions << action
+        # Handle regular models
+        else
+          resource_name = subject.underscore.pluralize
+          Rails.logger.debug "Regular model detected. Resource name: #{resource_name}"
+          
+          # Look through main Rails routes for this resource
+          Rails.application.routes.routes.each do |route|
+            next unless route.path.spec.to_s.include?(resource_name)
+            
+            # Extract action from route
+            if route.defaults[:action]
+              action = route.defaults[:action]
+              # Map HTTP verbs to standard actions and include custom actions
+              case action
+              when 'index' then actions << 'read'
+              when 'show' then actions << 'read'
+              when 'create' then actions << 'create'
+              when 'update' then actions << 'update'
+              when 'destroy' then actions << 'destroy'
+              when 'edit', 'new' then next # Skip these as they're UI actions
+              else
+                # Custom actions
+                actions << action
+              end
             end
           end
         end
@@ -245,6 +325,37 @@ module Cccux
       end
       
       actions.uniq
+    end
+
+    def discover_custom_actions_for_module(module_name, model_name)
+      custom_actions = []
+      
+      begin
+        # Convert model name to controller name pattern
+        controller_name = "#{module_name.downcase}/#{model_name.underscore.pluralize}"
+        
+        Rails.logger.debug "Looking for custom actions in controller: #{controller_name}"
+        
+        # Look through Rails routes for this module's controllers
+        Rails.application.routes.routes.each do |route|
+          next unless route.defaults[:controller]&.start_with?("#{module_name.downcase}/")
+          next unless route.defaults[:action]
+          
+          action = route.defaults[:action]
+          
+          # Skip standard CRUD actions and UI actions
+          next if %w[index show create update destroy new edit].include?(action)
+          
+          # Include custom actions
+          custom_actions << action
+          Rails.logger.debug "Found custom action: #{action} in #{route.defaults[:controller]}"
+        end
+        
+      rescue => e
+        Rails.logger.warn "Error discovering custom actions for #{module_name}::#{model_name}: #{e.message}"
+      end
+      
+      custom_actions.uniq
     end
 
     def skip_model?(model_class)
