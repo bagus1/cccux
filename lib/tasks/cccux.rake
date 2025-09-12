@@ -72,16 +72,25 @@ namespace :cccux do
     
     # Step 5: Run CCCUX migrations
     puts "📋 Step 5: Running CCCUX migrations..."
-    begin
-      Rake::Task['db:migrate'].invoke
-    rescue RuntimeError => e
-      if e.message.include?("Don't know how to build task 'db:migrate'")
-        puts "   ⚠️  Skipping migrations (not available in engine context)"
-      else
-        raise e
+    
+    # Check if users table exists (required for CCCUX migrations)
+    if ActiveRecord::Base.connection.table_exists?('users')
+      begin
+        Rake::Task['db:migrate'].invoke
+        puts "✅ CCCUX migrations completed"
+      rescue RuntimeError => e
+        if e.message.include?("Don't know how to build task 'db:migrate'")
+          puts "   ⚠️  Skipping migrations (not available in engine context)"
+        else
+          raise e
+        end
       end
+    else
+      puts "   ⚠️  Users table not found - CCCUX migrations require Devise to be installed first"
+      puts "   📋 Please run: bundle add devise && rails generate devise:install && rails generate devise User && rails db:migrate"
+      puts "   📋 Then run: rake cccux:setup"
+      puts "   ⏭️  Skipping CCCUX migrations for now"
     end
-    puts "✅ CCCUX migrations completed"
     
     # Step 6: Include CCCUX concern in User model
     puts "📋 Step 6: Adding CCCUX to User model..."
