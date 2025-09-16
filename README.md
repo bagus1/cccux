@@ -39,6 +39,11 @@ Add to your Gemfile:
 gem 'cccux', path: 'path/to/cccux'
 ```
 
+or this but maybe better to run it locally for now:
+```ruby
+gem 'cccux', '~> 0.3.0'
+```
+
 Run:
 ```bash
 bundle install
