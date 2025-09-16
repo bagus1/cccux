@@ -321,7 +321,7 @@ namespace :cccux do
     end
     
     # Create CRUD permissions for each MegaBar model
-    actions = %w[create read update destroy]
+    actions = %w[create read update destroy move administer_page administer_block filter]
     permissions_created = 0
     
     megabar_models.each do |model_name|
